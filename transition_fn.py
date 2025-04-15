@@ -37,40 +37,27 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[df['Date'] > year_horizon]
-    result_dict = {}
-    combos = []
-    for i in range(len(df)-days):
-        data_series = pd.Series(df[col][i:i+days])
-        state = get_state.get_state_by_percentile(data_series=data_series, state_width=1, min=data_series.min(),
-                                                  max=data_series.max())
-        combination = Combination(state)
-        combos.append(str(combination))
-        if str(combination) not in result_dict:
-            result_dict[str(combination)] = 1
-        else:
-            result_dict[str(combination)] += 1
-    # result_dict[combination] is the total number of occurrences of combination
-    # row of probabilities that you enter each other probability
-    result = {}
-    for k, v in result_dict.items():  # row
-        intermed = {}   # of transitions to each other state
-        row_props = {}
-        for m, n in result_dict.items():  # column
-            for index in range(len(combos) - 1):
-                if combos[index] == str(k) and combos[index + 1] == str(m):
-                    if m not in intermed:
-                        intermed[m] = 1
-                    else:
-                        intermed[m] += 1
-        for key, val in intermed.items():
-            proportion = float(val / v)
-            row_props[str(key)] = proportion
 
-        result[str(k)] = row_props  # double dict
-    print(result)
+    data_list = [df[col][i:i+days] for i in range(len(df)-days)]
+    data_series = pd.Series(data_list)
 
-    with open('transition_table.json', 'w') as f:
-        json.dump(result, f, indent=4)
+    state_history = [str(Combination(get_state.get_state_by_percentile
+                                     (data_series=state, state_width=1, min=state.min(),
+                                      max=state.max()))) for state in data_series]
+    state_history = pd.Series(state_history)
+    counts = state_history[:-1].value_counts()
+
+    combos = sorted(state_history.unique())
+    combo_series = pd.Series(combos)
+
+    hist_list = state_history.to_list()
+    pairs = list(zip(hist_list[:-1], hist_list[1:]))
+
+    data = [[pairs.count((i, j)) / counts[i] if counts[i] > 0 else 0
+             for j in combos]
+            for i in combos]
+    result_df = pd.DataFrame(data, index=combo_series, columns=combo_series)
+    result_df.to_csv('transition_table.csv')
 
 
 transition_fn_by_prob()

@@ -1,17 +1,15 @@
 import unittest
 import json
+import numpy as np
+import pandas as pd
 
 
 class MyTestCase(unittest.TestCase):
-    def test_something(self):
-        with open("/Users/walkerwatson/PycharmProjects/markovian-stock-modeling1/transition_table.json", "r") as f:
-            data = json.load(f)
-        for k, v in data.items():
-            total = 0
-            for val in data[k].values():
-                total += val
-            print(total)
-            self.assertAlmostEqual(total, 1, delta=.02)  # add assertion here
+    def test_row_sum(self):
+        data = pd.read_csv('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling1/transition_table.csv',
+                           index_col=0, header=0)
+        check = data.sum(axis=1)
+        assert np.isclose(check, 1, atol=1e-6).all()  # add assertion here
 
 
 if __name__ == '__main__':

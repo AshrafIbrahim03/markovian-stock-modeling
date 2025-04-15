@@ -15,6 +15,7 @@ def get_target(t_table: str = 'transition_table.json',
     # TODO: validate behavior for multiple transitions in future (make sure probs sum to 1)
 
     df = pd.read_json(t_table)
+    print(df)
     matrix = df.fillna(0)
     power_matrix = matrix ** days_into_future  # calculate P matrix for multiple transitions in the future
     prob_list = power_matrix[cur_state]
@@ -24,4 +25,4 @@ def get_target(t_table: str = 'transition_table.json',
     return result_state, result_prob
 
 
-print(get_target(days_into_future=5))
+print(get_target(days_into_future=1))
