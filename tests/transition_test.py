@@ -11,6 +11,8 @@ class MyTestCase(unittest.TestCase):
         check = data.sum(axis=1)
         assert np.isclose(check, 1, atol=1e-6).all()  # add assertion here
 
+    def test_illegal_states(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()
