@@ -23,10 +23,8 @@ class MyTestCase(unittest.TestCase):
         result = transition_fn.transition_fn_by_prob(path=data_path)
         for index, row in result.iterrows():  # for three-attribute states specifically
             to_index = index[1:]
-            cols = [col for col in result.columns if col[:2] == to_index]
-            print(index)
-            print(cols)
-            print(row[cols].sum())
+            cols = [col for col in result.columns if col[:2] != to_index]
+
             assert row[cols].sum() == 0
 
 
