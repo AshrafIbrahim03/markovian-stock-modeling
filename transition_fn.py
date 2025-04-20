@@ -5,13 +5,19 @@ import datetime
 import json
 
 
+#  The below Combination class will be replaced by the State object we create.
+#  As discussed, the state object must hold a pd.Series of signed integers.
+#  Parameter: "bins" (I'm open to better names here) number of bins to create on the normalized scale. MUST BE ODD
 class Combination:
     """
     This class takes in a series of normalized scores and assigns each score a value depending on the num_bins.
     State length is determined by the length of series, and the number of attributes is determined by num_bins - 1.
     TODO: make this work for num_bins >= 11 by overriding comparator and equals
     """
-    def __init__(self, series: pd.Series, num_bins: int = 4):
+
+    def __init__(self,
+                 series: pd.Series,
+                 num_bins: int = 4):
         # key = {np.linspace(-100, 100, num=num_bins)[i]: i for i in range(num_bins)}
         thresholds = pd.Series(np.linspace(-100, 100, num=num_bins))
         self.combination = np.digitize(series, thresholds, right=False)
@@ -20,6 +26,7 @@ class Combination:
         return str(self.combination)
 
 
+# For testing purposes, it is ok to use the below transition function with all default args
 def transition_fn_by_prob(year_horizon: int = 2015,
                           path: str = './data/inflation_adjusted_berkshire_stocks.csv',
                           col: str = 'Open_adjusted',
@@ -38,7 +45,7 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[df['Date'] > year_horizon]
 
-    data_list = [df[col][i:i+days] for i in range(len(df)-days)]
+    data_list = [df[col][i:i + days] for i in range(len(df) - days)]
     data_series = pd.Series(data_list)
 
     state_history = [str(Combination(get_state.get_state_by_percentile
@@ -57,7 +64,5 @@ def transition_fn_by_prob(year_horizon: int = 2015,
              for j in combos]
             for i in combos]
     result_df = pd.DataFrame(data, index=combo_series, columns=combo_series)
-    result_df.to_csv('transition_table.csv')
-
-
-transition_fn_by_prob()
+    return result_df
+    # result_df.to_csv('transition_table.csv')
