@@ -19,7 +19,7 @@ class Combination:
 
     def __init__(self,
                  series: pd.Series,
-                 num_bins: int = 4,
+                 num_bins: int = 20,
                  max_delta: int = 20):
         # key = {np.linspace(-100, 100, num=num_bins)[i]: i for i in range(num_bins)}
         thresholds = pd.Series(np.linspace(max_delta * (-1), max_delta, num=num_bins))
@@ -33,9 +33,9 @@ class Combination:
 
 
 # For testing purposes, it is ok to use the below transition function with all default args
-def transition_fn_by_prob(year_horizon: datetime = datetime.datetime(2015, 1, 1),
+def transition_fn_by_prob(path: str,
+                          year_horizon: datetime = datetime.datetime(2015, 1, 1),
                           today: datetime = datetime.datetime(2025, 3, 1),
-                          path: str = './data/inflation_adjusted_berkshire_stocks.csv',
                           col: str = 'Open_adjusted',
                           days: int = 3,
                           state_func=get_state.get_state_by_perc_change
@@ -87,8 +87,8 @@ def transition_fn_by_prob(year_horizon: datetime = datetime.datetime(2015, 1, 1)
              for j in combos]
             for i in combos]
     result_df = pd.DataFrame(data, index=combos, columns=combos)
-    return result_df
     # result_df.to_csv('transition_table.csv')
+    return result_df
 
 
-# transition_fn_by_prob()
+# transition_fn_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')

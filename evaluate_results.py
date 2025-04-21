@@ -3,17 +3,21 @@ import datetime
 import transition_fn
 import get_state
 import get_target
+import os
 
 start = datetime.datetime(2021, 9, 28)
-end = datetime.datetime(2021, 11, 31)
+end = datetime.datetime(2021, 11, 30)
 date_list = pd.date_range(start, end).to_list()
 year_horizon = datetime.datetime(2015, 1, 1)
 # TODO: Change interaction between transition_fn and get_state so the current state
 #  can be generated with less repetition
 df = pd.read_csv('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
 result = pd.DataFrame(columns=['date', 'cur_state', 'predicted', 'prob', 'actual', 'success'])
+current_dir = os.path.dirname(__file__)
+root = os.path.abspath(os.path.join(current_dir, '..'))
+data_path = os.path.join(root, 'markovian-stock-modeling', 'data', 'inflation_adjusted_berkshire_stocks.csv')
 for today in date_list:
-    t_func = transition_fn.transition_fn_by_prob(today=today)
+    t_func = transition_fn.transition_fn_by_prob(today=today, path=data_path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date'])]
     col = 'Open_adjusted'
@@ -37,4 +41,4 @@ for today in date_list:
 
     result.loc[len(result)] = [today, today_state, predicted, prob, tomorrow_state, int(predicted == tomorrow_state)]
 
-result.to_csv('result_sheet.csv')
+result.to_csv('result_sheet20.csv')

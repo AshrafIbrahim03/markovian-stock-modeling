@@ -47,7 +47,7 @@ def get_state_by_percentile(data_series:pd.Series, states:int=6, state_width:flo
     percentiles = (clamped - min) / (max - min) * 100
     scores = np.clip(percentiles - 50,-50,50)
 
-    return  np.round(scores / state_width) * state_width
+    return np.round(scores / state_width) * state_width
 
 def get_state_by_perc_change(data_series:pd.Series, states:int=6, state_width:float=1,min:float=0,max:float=100):
     """

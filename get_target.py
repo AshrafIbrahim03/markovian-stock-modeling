@@ -19,6 +19,7 @@ def get_target(t_table: pd.DataFrame,
     # use additional parentheses and comma to force composite index recognition
     print(type(power_matrix.index))
     print(cur_state in power_matrix.index)
+    print(power_matrix.index)
     prob_list = power_matrix.loc[[cur_state]].squeeze()
     prob_list = prob_list.sort_values(ascending=False)
     result_state = prob_list.index[0]
