@@ -61,7 +61,6 @@ def get_state_by_perc_change(data_series:pd.Series, states:int=6, state_width:fl
     perc_change = (diffs[i] / start_days.iloc[i] for i in range(len(start_days)))
     perc_change = pd.Series(perc_change)
     score = perc_change * 100
-    print(score)
     return score
 
 

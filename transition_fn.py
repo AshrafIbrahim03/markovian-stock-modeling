@@ -33,7 +33,8 @@ class Combination:
 
 
 # For testing purposes, it is ok to use the below transition function with all default args
-def transition_fn_by_prob(year_horizon: int = 2015,
+def transition_fn_by_prob(year_horizon: datetime = datetime.datetime(2015, 1, 1),
+                          today: datetime = datetime.datetime(2025, 3, 1),
                           path: str = './data/inflation_adjusted_berkshire_stocks.csv',
                           col: str = 'Open_adjusted',
                           days: int = 3,
@@ -48,10 +49,9 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     days: number of days included in each state; aka "state length"
     """
     # print('pre-read: ' + str(time.time()))
-    year_horizon = datetime.datetime(year_horizon, 1, 1)
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df[df['Date'] > year_horizon]
+    df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
 
     # print('pre-data_series: ' + str(time.time()))
     data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
@@ -63,6 +63,8 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in data_series]
     maxes = np.array([abs(percs).max() for percs in perc_changes])
     max_delta = maxes.max()
+    # print('max delta')
+    # print(max_delta)
 
     state_history = [Combination(state_func
                                  (data_series=state, state_width=1, min=state.min(),
@@ -79,7 +81,6 @@ def transition_fn_by_prob(year_horizon: int = 2015,
 
     # combos = state_history.unique()  # returns np array
     pairs = list(zip(state_history[:-1], state_history[1:]))
-    print(pairs)
     # print('post zip: ' + str(time.time()))
 
     data = [[pairs.count((i, j)) / counts[i] if counts[i] > 0 else 0
