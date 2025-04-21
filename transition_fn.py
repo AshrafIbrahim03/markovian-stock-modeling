@@ -19,9 +19,10 @@ class Combination:
 
     def __init__(self,
                  series: pd.Series,
-                 num_bins: int = 4):
+                 num_bins: int = 4,
+                 max_delta: int = 20):
         # key = {np.linspace(-100, 100, num=num_bins)[i]: i for i in range(num_bins)}
-        thresholds = pd.Series(np.linspace(-100, 100, num=num_bins))
+        thresholds = pd.Series(np.linspace(max_delta * (-1), max_delta, num=num_bins))
         self.combination = tuple(np.digitize(series, thresholds, right=False))
 
     def get_combination(self):
@@ -32,11 +33,12 @@ class Combination:
 
 
 # For testing purposes, it is ok to use the below transition function with all default args
-def transition_fn_by_prob(year_horizon: int = 2015,
+def transition_fn_by_prob(year_horizon: datetime = datetime.datetime(2015, 1, 1),
+                          today: datetime = datetime.datetime(2025, 3, 1),
                           path: str = './data/inflation_adjusted_berkshire_stocks.csv',
                           col: str = 'Open_adjusted',
                           days: int = 3,
-                          state_func=get_state.get_state_by_percentile
+                          state_func=get_state.get_state_by_perc_change
                           ) -> []:
     """
     This function returns a transition probability matrix based on the frequency of past transitions.
@@ -47,19 +49,26 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     days: number of days included in each state; aka "state length"
     """
     # print('pre-read: ' + str(time.time()))
-    year_horizon = datetime.datetime(year_horizon, 1, 1)
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df[df['Date'] > year_horizon]
+    df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
 
     # print('pre-data_series: ' + str(time.time()))
-    data_list = [df[col][i:i + days] for i in range(len(df) - days)]
+    data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
+    # data_list is currently set to start at item 2 for percent change calculations
+
     data_series = pd.Series(data_list)
 
     # print('pre-state: ' + str(time.time()))
+    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in data_series]
+    maxes = np.array([abs(percs).max() for percs in perc_changes])
+    max_delta = maxes.max()
+    # print('max delta')
+    # print(max_delta)
+
     state_history = [Combination(state_func
                                  (data_series=state, state_width=1, min=state.min(),
-                                  max=state.max())).get_combination() for state in data_series]
+                                  max=state.max()), max_delta=max_delta).get_combination() for state in data_series]
     # print('post-state: ' + str(time.time()))
     combos = list({state for state in state_history})
     # print(combos)  # Only 12 of 27 possible combos are appearing
@@ -71,9 +80,7 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     # print('post state history series: ' + str(time.time()))
 
     # combos = state_history.unique()  # returns np array
-
     pairs = list(zip(state_history[:-1], state_history[1:]))
-    # print(pairs)
     # print('post zip: ' + str(time.time()))
 
     data = [[pairs.count((i, j)) / counts[i] if counts[i] > 0 else 0
@@ -84,4 +91,4 @@ def transition_fn_by_prob(year_horizon: int = 2015,
     # result_df.to_csv('transition_table.csv')
 
 
-# print(transition_fn_by_prob())
+# transition_fn_by_prob()

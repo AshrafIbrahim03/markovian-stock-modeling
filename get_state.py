@@ -49,6 +49,18 @@ def get_state_by_percentile(data_series:pd.Series, states:int=6, state_width:flo
 
     return  np.round(scores / state_width) * state_width
 
+def get_state_by_perc_change(data_series:pd.Series, states:int=6, state_width:float=1,min:float=0,max:float=100):
+    """
 
+        """
+    start_days = data_series[:-1]
+    start_days.reset_index(drop=True)
+    pairs = list(zip(start_days, data_series[1:]))
+    diffs = [p[1] - p[0] for p in pairs]
+
+    perc_change = (diffs[i] / start_days.iloc[i] for i in range(len(start_days)))
+    perc_change = pd.Series(perc_change)
+    score = perc_change * 100
+    return score
 
 

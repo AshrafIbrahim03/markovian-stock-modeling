@@ -21,7 +21,12 @@ class MyTestCase(unittest.TestCase):
         data_path = os.path.join(root, 'data', 'inflation_adjusted_berkshire_stocks.csv')
 
         result = transition_fn.transition_fn_by_prob(path=data_path)
-        print(result)
+        for index, row in result.iterrows():  # for three-attribute states specifically
+            to_index = index[1:]
+            cols = [col for col in result.columns if col[:2] != to_index]
+
+            assert row[cols].sum() == 0
+
 
 if __name__ == '__main__':
     unittest.main()

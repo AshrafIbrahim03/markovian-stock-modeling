@@ -6,7 +6,7 @@ import json
 
 
 def get_target(t_table: str = 'transition_table.json',
-               cur_state: str = '[3 2 1]', days_into_future: int = 1):
+               cur_state=(3, 2, 1), days_into_future: int = 1):
     """
     This function takes a transition table t_table and calculates the most probable state to occur in
     days_into_future days from the given cur_state.
