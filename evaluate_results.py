@@ -17,7 +17,7 @@ current_dir = os.path.dirname(__file__)
 root = os.path.abspath(os.path.join(current_dir, '..'))
 data_path = os.path.join(root, 'markovian-stock-modeling', 'data', 'inflation_adjusted_berkshire_stocks.csv')
 for today in date_list:
-    t_func = transition_fn.transition_fn_by_prob(today=today, path=data_path)
+    t_func = transition_fn.t_table_generator_by_prob(today=today, path=data_path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date'])]
     col = 'Open_adjusted'
