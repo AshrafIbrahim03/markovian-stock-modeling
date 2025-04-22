@@ -1,6 +1,5 @@
 #! ./venv/bin/python
-import tensorflow_probability as tfp
-from get_state import get_state_by_percentile,get_state_by_zscore
+from get_state import get_state_by_percentile,get_state_by_zscore,get_state_by_perc_change
 from get_target import get_target
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -30,6 +29,14 @@ class FirstMC(MarkovChain):
     def __init__(self,initial_state:str):
         self.current_state = initial_state
     
+    def set_current_state(self,new_state:tuple[int]):
+        assert len(new_state) == len(self.current_state)
+
+        self.current_state = new_state
+
+    def get_current_state(self):
+        return self.current_state
+    
     def step(self,num:int) -> list[str]:
         to_ret:list[str] = []
         for _ in range(num):
@@ -37,3 +44,59 @@ class FirstMC(MarkovChain):
             to_ret.append(next_state)
             self.current_state = next_state
         return to_ret
+
+class FeedingMCException(Exception):
+    _error_type:int
+    
+    ILLEGAL_WINDOW_END = 1
+
+
+    def __init__(self,err_type:int):
+        assert err_type == FeedingMCException.ILLEGAL_WINDOW_END
+        self._error_type  = err_type
+    
+    def get_error_code(self)-> int:
+        return self._error_type
+
+
+class FeedingPercAggMC(MarkovChain):
+    """ This class uses get_target_by_perc_change, transition_fn_by_prob, and get_target for each step
+    # `step` FUNCTION **NOT WORKING**
+    """
+    data_window_start:int
+    data_window_end:int
+    window_len:int
+    data:pd.Series
+    p_matrix: pd.DataFrame
+    def __init__(self,data:pd.Series,window_len:int = 3, year_horizon:datetime.datetime = datetime.datetime(2015,3,1)):
+        self.data = data
+        self.data_window_start = 0
+        assert data.size > window_len 
+        assert window_len >0
+        self.data_window_end = window_len
+        self.window_len = window_len
+        self.p_matrix = transition_fn_by_prob("./data/inflation_adjusted_berkshire_stocks.csv",year_horizon=year_horizon,)
+    
+    def set_current_state(self,new_state:tuple[int]):
+        assert len(new_state) == len(self.current_state)
+
+        self.current_state = new_state
+
+    def get_current_state(self):
+        return self.current_state
+    
+    def _step(self) -> StateWindow:
+        if self.data_window_end > self.data.size:
+            raise FeedingMCException(FeedingMCException.ILLEGAL_WINDOW_END)
+        window = self.data[self.data_window_start:self.data_window_end]
+        assert window.size == self.window_len
+        current_state= StateWindow(tuple(get_state_by_perc_change(window)))
+        next_state,_ = get_target(self.p_matrix,current_state.as_tuple())
+        self.data_window_start+=1
+        self.data_window_end+=1
+        return next_state
+    
+    def step(self,num:int)-> list[StateWindow]:
+        to_ret = []
+        for _ in range(num):
+            to_ret.append(self._step())
