@@ -1,10 +1,10 @@
 #! ./venv/bin/python
 from get_state import get_state_by_percentile,get_state_by_zscore,get_state_by_perc_change
-from get_target import get_target
+from get_target import get_target,get_target_max
 from abc import ABC, abstractmethod
 import pandas as pd
-from transition_fn import transition_fn_by_prob
-from state import StateWindow
+from transition_fn import t_table_generator_by_prob,transition_fn_by_randomized_vector
+from state import StateValidator, StateWindow
 import datetime
 
 
@@ -68,6 +68,7 @@ class FeedingPercAggMC(MarkovChain):
     window_len:int
     data:pd.Series
     p_matrix: pd.DataFrame
+    validator:StateValidator
     def __init__(self,data:pd.Series,window_len:int = 3, year_horizon:datetime.datetime = datetime.datetime(2015,3,1)):
         self.data = data
         self.data_window_start = 0
@@ -75,10 +76,13 @@ class FeedingPercAggMC(MarkovChain):
         assert window_len >0
         self.data_window_end = window_len
         self.window_len = window_len
-        self.p_matrix = transition_fn_by_prob("./data/inflation_adjusted_berkshire_stocks.csv",year_horizon=year_horizon,)
+        self.validator = StateValidator(11,window_len)
+        self.p_matrix = t_table_generator_by_prob("./data/inflation_adjusted_berkshire_stocks.csv",year_horizon=year_horizon,days=window_len)
     
-    def set_current_state(self,new_state:tuple[int]):
+    def set_current_state(self,new_state:StateWindow):
         assert len(new_state) == len(self.current_state)
+        assert type(new_state) == StateWindow
+        assert self.validator.is_valid_state(new_state)
 
         self.current_state = new_state
 
