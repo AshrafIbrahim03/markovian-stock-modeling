@@ -27,3 +27,15 @@ def get_target(t_table: pd.DataFrame,
     return result_state, result_prob
 
 
+def get_target_max(prob_series:pd.Series)-> int:
+    """ Chooses most likely target from array of possible states and their associated probabilities
+    Arguments:
+    prob_series:pd.Series -> This is a series whose values are the probability that the index will occur.
+    """
+    assert prob_series.sum() == 1 # All the values must sum to 1 for it to be a probability vector
+
+    return prob_series.sort_values(ascending=False).index[0]
+
+
+
+
