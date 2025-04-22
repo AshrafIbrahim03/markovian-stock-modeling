@@ -2,9 +2,30 @@
 import tensorflow_probability as tfp
 from get_state import get_state_by_percentile,get_state_by_zscore
 from get_target import get_target
+from abc import ABC, abstractmethod
+import pandas as pd
+from transition_fn import transition_fn_by_prob
+from state import StateWindow
+import datetime
 
 
-class MarkovChain:
+
+class MarkovChain(ABC):
+    
+    @abstractmethod
+    def set_current_state(self,new_state:tuple[int]):
+        pass
+
+    @abstractmethod
+    def get_current_state(self):
+        pass
+
+    @abstractmethod
+    def step(self,num:int):
+        pass
+
+
+class FirstMC(MarkovChain):
     current_state:str
     def __init__(self,initial_state:str):
         self.current_state = initial_state
