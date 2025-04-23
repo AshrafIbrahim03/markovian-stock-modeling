@@ -18,9 +18,13 @@ class StateWindow:
     def as_tuple(self) -> tuple[int]:
         return self.state_window
     
-    def get_next_state(self,next_bin:int)->StateWindow:
+    def get_next_state(self,next_bin:int):
         """Given a bin, returns a StateWindow object with the given bin as the most recent state
+
+        Returns:
+        StateWindow
         """
+        assert type(next_bin) == int
         t = self.as_tuple()
         t = t + tuple([next_bin])
         return StateWindow(t[1:])
