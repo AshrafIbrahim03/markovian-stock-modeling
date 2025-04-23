@@ -50,7 +50,6 @@ class FeedingMCException(Exception):
     
     ILLEGAL_WINDOW_END = 1
 
-
     def __init__(self,err_type:int):
         assert err_type == FeedingMCException.ILLEGAL_WINDOW_END
         self._error_type  = err_type
@@ -104,3 +103,38 @@ class FeedingPercAggMC(MarkovChain):
         to_ret = []
         for _ in range(num):
             to_ret.append(self._step())
+
+
+class RandomizedMaxProbMC(MarkovChain):
+    """ This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using
+    """
+    current_state:StateWindow
+    validator:StateValidator
+
+    def __init__(self,initial_state:StateWindow,validator:StateValidator):
+        assert validator.is_valid_state(initial_state)
+        self.current_state = initial_state
+        self.validator = validator
+
+    def set_current_state(self,new_state:StateWindow):
+        assert len(new_state) == len(self.current_state)
+
+        self.current_state = new_state
+
+    def get_current_state(self):
+        return self.current_state
+
+    def _step(self)-> StateWindow:
+        probs = transition_fn_by_randomized_vector(self.current_state,self.validator)
+        next_state= StateWindow(get_target_max(probs))
+        self.current_state = next_state
+        return next_state
+
+    def step(self,num:int) -> list[StateWindow]:
+
+        to_ret:list[StateWindow] = []
+        for _ in range(num):
+            to_ret.append(self._step())
+        
+        return to_ret
+
