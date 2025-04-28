@@ -5,7 +5,7 @@ import datetime
 import time
 from collections import Counter
 import json
-from state import StateWindow,StateValidator
+from state import StateWindow, StateValidator
 
 
 #  The below Combination class will be replaced by the State object we create.
@@ -35,12 +35,12 @@ class Combination:
 
 # For testing purposes, it is ok to use the below transition function with all default args
 def t_table_generator_by_prob(path: str,
-                          year_horizon: datetime = datetime.datetime(2015, 1, 1),
-                          today: datetime = datetime.datetime(2025, 3, 1),
-                          col: str = 'Open_adjusted',
-                          days: int = 3,
-                          state_func=get_state.get_state_by_perc_change
-                          ) -> []:
+                              year_horizon: datetime = datetime.datetime(2015, 1, 1),
+                              today: datetime = datetime.datetime(2025, 3, 1),
+                              col: str = 'Open_adjusted',
+                              days: int = 3,
+                              state_func=get_state.get_state_by_perc_change
+                              ) -> []:
     """
     This function returns a transition probability matrix based on the frequency of past transitions.
 
@@ -61,7 +61,8 @@ def t_table_generator_by_prob(path: str,
     data_series = pd.Series(data_list)
 
     # print('pre-state: ' + str(time.time()))
-    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in data_series]
+    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in
+                    data_series]
     maxes = np.array([abs(percs).max() for percs in perc_changes])
     max_delta = maxes.max()
     # print('max delta')
@@ -91,7 +92,10 @@ def t_table_generator_by_prob(path: str,
     # result_df.to_csv('transition_table.csv')
     return result_df
 
-def transition_fn_by_p_matrix(p_matrix:pd.DataFrame,current_state:tuple[int],steps:int=1)->pd.Series:
+
+def transition_fn_by_p_matrix(p_matrix: pd.DataFrame,
+                              current_state: tuple[int],
+                              steps: int = 1) -> pd.Series:
     """ Takes in a p_matrix table and the number of steps into the future to predict
     Arguments:
     p_matrix(pd.Series) ->  This is a dataframe where the index should be equal to the columns . Each row sums to one.
@@ -101,17 +105,19 @@ def transition_fn_by_p_matrix(p_matrix:pd.DataFrame,current_state:tuple[int],ste
     Returns:
     A series whose indices are the different states and the values are the probability of that state occurring
     """
-    assert p_matrix.index.isin(p_matrix.columns).all() # the Index should be equal to the columns 
-    assert p_matrix.apply(lambda row: row.sum() ==1).all() # Each row should sum to 1
-    assert p_matrix.index.isin([current_state]).any() # current_state should be in the index
+    assert p_matrix.index.isin(p_matrix.columns).all()  # the Index should be equal to the columns
+    assert p_matrix.apply(lambda row: row.sum() == 1).all()  # Each row should sum to 1
+    assert p_matrix.index.isin([current_state]).any()  # current_state should be in the index
     p_mat = p_matrix ** steps
 
     return p_mat.T[current_state]
 
-def transition_fn_by_randomized_vector(current_state:StateWindow,validator:StateValidator)-> pd.Series:
+
+def transition_fn_by_randomized_vector(current_state: StateWindow,
+                                       validator: StateValidator) -> pd.Series:
     """Returns a Series whose indices are all the possible states and randomized probabilities assigned to each one"""
     all_states = list(validator.gen_state_space())
-    valid_states = [state for state in all_states if validator.is_next_state_valid(current_state,state)]
+    valid_states = [state for state in all_states if validator.is_next_state_valid(current_state, state)]
     num_valid_states = len(valid_states)
 
     rand_values = np.random.rand(num_valid_states)
@@ -122,12 +128,10 @@ def transition_fn_by_randomized_vector(current_state:StateWindow,validator:State
     ])
     return final_series
 
-
     # prob_dict = {state: 0 for state in all_states}
     # for state, prob in zip(valid_states, rand_values):
     #     prob_dict[state] = prob
 
     # return pd.Series(prob_dict)
-    
 
 # transition_fn_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')

@@ -9,12 +9,13 @@ class StateWindow:
 
     def __eq__(self, value) -> bool:
         assert type(value) == StateWindow
-        assert len(self.state_window) == len(value.state_window)# Two windows must have the same length to even see if they're equal
+        assert len(self.state_window) == len(value.state_window) # Two windows must have the same length to even see if they're equal
 
-        for (s1,s2) in zip(self.state_window,value.state_window):
+        for (s1, s2) in zip(self.state_window, value.state_window):
             if s1 is not s2:
                 return False
         return True
+
     def as_tuple(self) -> tuple[int]:
         return self.state_window
     
@@ -39,14 +40,14 @@ class StateWindow:
 class ValidationException(Exception):
     """Wrapper class to define different error types
     """
-    LEGAL_STATE:int = 0 # The passed state does not violate any rules from the StateValidator
-    ILLEGAL_BIN:int=1 # One of the bins in the StateWindow that was passed is not in the bounds defined by the Validator
-    ILLEGAL_STATE_LEN:int=2 # The StateWindow that was passed has the wrong length
-    ILLEGAL_NEXT_STATE:int=3 # The next state passed cannot happen after the current state passed
+    LEGAL_STATE: int = 0  # The passed state does not violate any rules from the StateValidator
+    ILLEGAL_BIN: int = 1  # One of the bins in the StateWindow that was passed is not in the bounds defined by the Validator
+    ILLEGAL_STATE_LEN: int = 2  # The StateWindow that was passed has the wrong length
+    ILLEGAL_NEXT_STATE: int = 3  # The next state passed cannot happen after the current state passed
 
-    error_type:int
+    error_type: int
 
-    def __init__(self,err_type:int, *args):
+    def __init__(self, err_type: int, *args):
         assert err_type == ValidationException.ILLEGAL_BIN or err_type == ValidationException.ILLEGAL_STATE_LEN
         self.error_type = err_type
         super().__init__(*args)
@@ -57,10 +58,10 @@ class StateValidator:
     Validator for states. Can check states to see if they adhere to its rules
     The bounds for states are defined by the number passed to `num_bins` in the constructor. See `__init__` for more details
     """
-    num_bins:int
-    window_len:int
+    num_bins: int
+    window_len: int
 
-    def __init__(self,num_bins:int,window_len:int):
+    def __init__(self, num_bins: int, window_len: int):
         """ Creates a StateValidator object
 
         Arguments
@@ -68,8 +69,8 @@ class StateValidator:
             then that means that the value 0 will represent no change in value,
             and there will be 5 states representing positive change and 5 states representing negative change.
         """
-        assert num_bins%2 ==1 # num_bins should be odd
-        assert window_len>0
+        assert num_bins % 2 == 1  # num_bins should be odd
+        assert window_len > 0
         self.num_bins = num_bins
         self.window_len = window_len
 
@@ -93,7 +94,7 @@ class StateValidator:
         
         return ValidationException.LEGAL_STATE
     
-    def is_next_state_valid(self,current_state:StateWindow,next_state:StateWindow) -> int:
+    def is_next_state_valid(self, current_state: StateWindow, next_state: StateWindow) -> int:
         """ Makes sure that the `next_state` passed can actually happen after the `current_state`
 
         Arguments:
@@ -118,20 +119,15 @@ class StateValidator:
         n = self.window_len
 
         # Checks to see that the last n elements of current_state are equal to the first n elements of next_state
-        for (current,next) in zip(current_window[1:],next_window[:n-1]):
+        for (current, next) in zip(current_window[1:], next_window[:n-1]):
             if current != next:
                 return ValidationException.ILLEGAL_NEXT_STATE
         return ValidationException.LEGAL_STATE
 
-
-
-        
-        
-
-    def get_max_bin(self)->int:
-        return int((self.num_bins-1) /2)
+    def get_max_bin(self) -> int:
+        return int((self.num_bins-1) / 2)
     
     def gen_state_space(self):
         max_bin = self.get_max_bin()
         assert type(max_bin) == int
-        return combinations_with_replacement(range(-1*max_bin,max_bin+1),self.window_len)
+        return combinations_with_replacement(range(-1*max_bin, max_bin+1), self.window_len)
