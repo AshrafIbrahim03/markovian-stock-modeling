@@ -66,11 +66,15 @@ def get_state_by_perc_change(data_series: pd.Series):
 
 
 def integerize_state(data_series: pd.Series, num_bins: int, max_delta: float):
+    # TODO: investigate why output is
     if num_bins % 2 != 1:
         print("Even bin count supplied! Bin count raised by 1 to become odd.")
         num_bins += 1
     thresholds = pd.Series(np.linspace(max_delta * (-1), max_delta, num=(num_bins + 1)))
     thresholds *= 100
-    score = tuple(np.digitize(data_series, thresholds, right=False))
+    print(data_series)
+    print(thresholds)
+    shift = int((num_bins + 1) / 2)
+    score = tuple(np.digitize(data_series, thresholds, right=False) - shift)
     return score
 

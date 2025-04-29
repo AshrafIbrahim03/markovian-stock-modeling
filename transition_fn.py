@@ -63,17 +63,19 @@ def t_table_generator_by_prob(path: str,
     # data_list is currently set to start at item 2 for percent change calculations
 
     data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
-    data_series = data_series / 100
+    data_series = data_series * 100
+    # print(data_series)
     # print('pre-state: ' + str(time.time()))
     perc_changes = [state_func(data_series=state) for state in
                     data_series]
 
     maxes = np.array([abs(percs).max() for percs in data_list])
+    print(maxes)
     max_delta = maxes.max()
     print(max_delta)
     bins = 3
     int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=bins, max_delta=max_delta)
-                   for state in perc_changes]
+                   for state in data_series]
     # print('max delta')
     # print(max_delta)
     print(int_changes)
