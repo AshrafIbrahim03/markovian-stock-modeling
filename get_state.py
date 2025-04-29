@@ -53,16 +53,24 @@ def get_state_by_percentile(data_series:pd.Series, states:int=6, state_width:flo
 def get_state_by_perc_change(data_series: pd.Series):
     """
         accepts a Series of historical value data (length n), returns a series of percent daily changes (length n-1)
+        num_bins: optional arg to convert percent changes into state-ready int values. MUST BE ODD
         """
     start_days = data_series[:-1]
     end_days = data_series[1:]
     start_days.reset_index(drop=True)
     pairs = list(zip(start_days, end_days))
     diffs = [p[1] - p[0] for p in pairs]
-
     perc_change = (diffs[i] / start_days.iloc[i] for i in range(len(start_days)))
     perc_change = pd.Series(perc_change)
-    score = perc_change * 100
-    return score
+    return perc_change
 
+
+def integerize_state(data_series: pd.Series, num_bins: int, max_delta: float):
+    if num_bins % 2 != 1:
+        print("Even bin count supplied! Bin count raised by 1 to become odd.")
+        num_bins += 1
+    thresholds = pd.Series(np.linspace(max_delta * (-1), max_delta, num=(num_bins + 1)))
+    thresholds *= 100
+    score = tuple(np.digitize(data_series, thresholds, right=False))
+    return score
 

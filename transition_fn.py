@@ -63,19 +63,24 @@ def t_table_generator_by_prob(path: str,
     # data_list is currently set to start at item 2 for percent change calculations
 
     data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
-
+    data_series = data_series / 100
     # print('pre-state: ' + str(time.time()))
     perc_changes = [state_func(data_series=state) for state in
                     data_series]
 
-    maxes = np.array([abs(percs).max() for percs in perc_changes])
+    maxes = np.array([abs(percs).max() for percs in data_list])
     max_delta = maxes.max()
+    print(max_delta)
+    bins = 3
+    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=bins, max_delta=max_delta)
+                   for state in perc_changes]
     # print('max delta')
     # print(max_delta)
-    print(data_series)
-    state_history1 = [StateWindow(state).as_tuple() for state in data_series]
+    print(int_changes)
+    state_history1 = [StateWindow(state).as_tuple() for state in int_changes]
     print(state_history1)
     print(type(state_history1))
+
     state_history = [Combination(state_func
                                  (data_series=state), max_delta=max_delta).get_combination() for state in data_series]
     print(state_history)
@@ -145,4 +150,5 @@ def transition_fn_by_randomized_vector(current_state: StateWindow,
 
 
 validator = StateValidator(9, 3)
-t_table_generator_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
+t_table_generator_by_prob(
+    '/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
