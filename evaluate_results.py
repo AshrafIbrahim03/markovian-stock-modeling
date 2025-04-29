@@ -5,12 +5,16 @@ import get_state
 import get_target
 import os
 
+class ChainEvaluator():
+
+
 start = datetime.datetime(2021, 9, 28)
 end = datetime.datetime(2021, 11, 30)
 date_list = pd.date_range(start, end).to_list()
 year_horizon = datetime.datetime(2015, 1, 1)
 # TODO: Change interaction between transition_fn and get_state so the current state
 #  can be generated with less repetition
+
 df = pd.read_csv('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
 result = pd.DataFrame(columns=['date', 'cur_state', 'predicted', 'prob', 'actual', 'success'])
 current_dir = os.path.dirname(__file__)

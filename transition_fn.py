@@ -49,28 +49,37 @@ def t_table_generator_by_prob(path: str,
     col: string name of column within the csv located at path that contains the desired values
     days: number of days included in each state; aka "state length"
     """
+    # TODO: remove Combinations, replace with States
     # print('pre-read: ' + str(time.time()))
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
+    att_list = state_func(df[col])
 
     # print('pre-data_series: ' + str(time.time()))
-    data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
+    # data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
+    data_list = [att_list[i - 1:i + days] for i in range(1, len(att_list) - days)]
+
     # data_list is currently set to start at item 2 for percent change calculations
 
-    data_series = pd.Series(data_list)
+    data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
 
     # print('pre-state: ' + str(time.time()))
-    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in
+    perc_changes = [state_func(data_series=state) for state in
                     data_series]
+
     maxes = np.array([abs(percs).max() for percs in perc_changes])
     max_delta = maxes.max()
     # print('max delta')
     # print(max_delta)
-
+    print(data_series)
+    state_history1 = [StateWindow(state).as_tuple() for state in data_series]
+    print(state_history1)
+    print(type(state_history1))
     state_history = [Combination(state_func
-                                 (data_series=state, state_width=1, min=state.min(),
-                                  max=state.max()), max_delta=max_delta).get_combination() for state in data_series]
+                                 (data_series=state), max_delta=max_delta).get_combination() for state in data_series]
+    print(state_history)
+    print(type(state_history))
     # print('post-state: ' + str(time.time()))
     combos = list({state for state in state_history})
     # print(combos)  # Only 12 of 27 possible combos are appearing
@@ -134,4 +143,6 @@ def transition_fn_by_randomized_vector(current_state: StateWindow,
 
     # return pd.Series(prob_dict)
 
-# transition_fn_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
+
+validator = StateValidator(9, 3)
+t_table_generator_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')

@@ -25,11 +25,11 @@ class MarkovChain(ABC):
 
 
 class FirstMC(MarkovChain):
-    current_state:str
+    current_state: str
     def __init__(self,initial_state:str):
         self.current_state = initial_state
     
-    def set_current_state(self,new_state:tuple[int]):
+    def set_current_state(self, new_state: tuple[int]):
         assert len(new_state) == len(self.current_state)
 
         self.current_state = new_state
