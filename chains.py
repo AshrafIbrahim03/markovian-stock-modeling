@@ -7,8 +7,8 @@ from get_state import (
 from get_target import get_target, get_target_max
 from abc import ABC, abstractmethod
 import pandas as pd
-from transition_fn import t_table_generator_by_prob, transition_fn_by_randomized_vector
-from state import StateValidator, StateWindow
+from transition_fn import t_table_generator_by_prob, transition_fn_by_randomized_vector,transition_fn_by_lin_reg
+from state import StateValidator, State
 import datetime
 
 
@@ -93,9 +93,9 @@ class FeedingPercAggMC(MarkovChain):
             days=window_len,
         )
 
-    def set_current_state(self, new_state: StateWindow):
+    def set_current_state(self, new_state: State):
         assert len(new_state) == len(self.current_state)
-        assert type(new_state) is StateWindow
+        assert type(new_state) is State
         assert self.validator.is_valid_state(new_state)
 
         self.current_state = new_state
@@ -103,18 +103,18 @@ class FeedingPercAggMC(MarkovChain):
     def get_current_state(self):
         return self.current_state
 
-    def _step(self) -> StateWindow:
+    def _step(self) -> State:
         if self.data_window_end > self.data.size:
             raise FeedingMCException(FeedingMCException.ILLEGAL_WINDOW_END)
         window = self.data[self.data_window_start : self.data_window_end]
         assert window.size == self.window_len
-        current_state = StateWindow(tuple(get_state_by_perc_change(window)))
+        current_state = State(tuple(get_state_by_perc_change(window)))
         next_state, _ = get_target(self.p_matrix, current_state.as_tuple())
         self.data_window_start += 1
         self.data_window_end += 1
         return next_state
 
-    def step(self, num: int) -> list[StateWindow]:
+    def step(self, num: int) -> list[State]:
         to_ret = []
         for _ in range(num):
             to_ret.append(self._step())
@@ -123,15 +123,15 @@ class FeedingPercAggMC(MarkovChain):
 class RandomizedMaxProbMC(MarkovChain):
     """This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using"""
 
-    current_state: StateWindow
+    current_state: State
     validator: StateValidator
 
-    def __init__(self, initial_state: StateWindow, validator: StateValidator):
+    def __init__(self, initial_state: State, validator: StateValidator):
         assert validator.is_valid_state(initial_state)
         self.current_state = initial_state
         self.validator = validator
 
-    def set_current_state(self, new_state: StateWindow):
+    def set_current_state(self, new_state: State):
         assert len(new_state) == len(self.current_state)
 
         self.current_state = new_state
@@ -139,14 +139,14 @@ class RandomizedMaxProbMC(MarkovChain):
     def get_current_state(self):
         return self.current_state
 
-    def _step(self) -> StateWindow:
+    def _step(self) -> State:
         probs = transition_fn_by_randomized_vector(self.current_state, self.validator)
-        next_state = StateWindow(get_target_max(probs))
+        next_state = State(get_target_max(probs))
         self.current_state = next_state
         return next_state
 
-    def step(self, num: int) -> list[StateWindow]:
-        to_ret: list[StateWindow] = []
+    def step(self, num: int) -> list[State]:
+        to_ret: list[State] = []
         for _ in range(num):
             to_ret.append(self._step())
 

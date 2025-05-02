@@ -5,7 +5,7 @@ import datetime
 import time
 from collections import Counter
 import json
-from state import StateWindow,StateValidator
+from state import State,StateValidator
 
 
 #  The below Combination class will be replaced by the State object we create.
@@ -108,7 +108,7 @@ def transition_fn_by_p_matrix(p_matrix:pd.DataFrame,current_state:tuple[int],ste
 
     return p_mat.T[current_state]
 
-def transition_fn_by_randomized_vector(current_state:StateWindow,validator:StateValidator)-> pd.Series:
+def transition_fn_by_randomized_vector(current_state:State,validator:StateValidator)-> pd.Series:
     """Returns a Series whose indices are all the possible states and randomized probabilities assigned to each one"""
     all_states = list(validator.gen_state_space())
     valid_states = [state for state in all_states if validator.is_next_state_valid(current_state,state)]

@@ -1,5 +1,5 @@
 from itertools import combinations_with_replacement
-class StateWindow:
+class State:
     """
         This class represents a state in a Markov Chain. It abstracts a tuple of integers. The most recent state is the last element in a tuple
     """
@@ -8,7 +8,7 @@ class StateWindow:
         self.state_window = state_win
 
     def __eq__(self, value) -> bool:
-        assert type(value) == StateWindow
+        assert type(value) == State
         assert len(self.state_window) == len(value.state_window)# Two windows must have the same length to even see if they're equal
 
         for (s1,s2) in zip(self.state_window,value.state_window):
@@ -27,13 +27,13 @@ class StateWindow:
         assert type(next_bin) == int
         t = self.as_tuple()
         t = t + tuple([next_bin])
-        return StateWindow(t[1:])
+        return State(t[1:])
     
     def __len__(self)->int:
         return len(self.state_window)
 
     def __str__(self):
-        return "["+ " ".join(self.state_window) +"]"
+        return self.as_tuple().__str__()
 
 
 class ValidationException(Exception):
@@ -47,7 +47,7 @@ class ValidationException(Exception):
     error_type:int
 
     def __init__(self,err_type:int, *args):
-        assert err_type == ValidationException.ILLEGAL_BIN or err_type == ValidationException.ILLEGAL_STATE_LEN
+        assert err_type == ValidationException.ILLEGAL_BIN or err_type == ValidationException.ILLEGAL_STATE_LEN or err_type == ValidationException.ILLEGAL_NEXT_STATE
         self.error_type = err_type
         super().__init__(*args)
 
@@ -74,7 +74,7 @@ class StateValidator:
         self.window_len = window_len
 
 
-    def is_valid_state(self,window:StateWindow)-> int:
+    def is_valid_state(self,window:State)-> int:
         """ Makes sure that a passed in state is valid given the StateValidator's implementation
 
         Arguments:
@@ -83,7 +83,7 @@ class StateValidator:
         Returns:
         An int based on what is not valid. Refer to `ValidationException` for more details.
         """
-        assert type(window) == StateWindow
+        assert type(window) == State
         max_state = (self.num_bins-1) /2
         states = tuple(map(lambda x: abs(x),window.as_tuple()))
         if not all(map(lambda val: val <=max_state,states)):
@@ -93,7 +93,7 @@ class StateValidator:
         
         return ValidationException.LEGAL_STATE
     
-    def is_next_state_valid(self,current_state:StateWindow,next_state:StateWindow) -> int:
+    def is_next_state_valid(self,current_state:State,next_state:State) -> int:
         """ Makes sure that the `next_state` passed can actually happen after the `current_state`
 
         Arguments:
@@ -103,10 +103,10 @@ class StateValidator:
         Returns:
         An integer that says what type of error occurred. 0 means that it's a legal state. Refer to `ValidationException` for more details.
         """
-        if type(current_state) != StateWindow:
-            current_state = StateWindow(current_state)
-        if type(next_state) != StateWindow:
-            next_state = StateWindow(next_state)
+        if type(current_state) != State:
+            current_state = State(current_state)
+        if type(next_state) != State:
+            next_state = State(next_state)
 
         if self.is_valid_state(current_state) != 0:
             return self.is_valid_state(current_state)
@@ -128,10 +128,13 @@ class StateValidator:
         
         
 
-    def get_max_bin(self)->int:
+    def get_max_attr(self)->int:
         return int((self.num_bins-1) /2)
-    
+
+    def get_min_attr(self)->int:
+        return -1 * self.get_max_attr() 
+
     def gen_state_space(self):
-        max_bin = self.get_max_bin()
+        max_bin = self.get_max_attr()
         assert type(max_bin) == int
         return combinations_with_replacement(range(-1*max_bin,max_bin+1),self.window_len)
