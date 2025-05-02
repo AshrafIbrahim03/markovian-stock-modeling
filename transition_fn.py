@@ -39,12 +39,12 @@ class Combination:
 
 # For testing purposes, it is ok to use the below transition function with all default args
 def t_table_generator_by_prob(path: str,
-                              year_horizon: datetime = datetime.datetime(2015, 1, 1),
-                              today: datetime = datetime.datetime(2025, 3, 1),
-                              col: str = 'Open_adjusted',
-                              days: int = 3,
-                              state_func=get_state.get_state_by_perc_change
-                              ) -> []:
+                          year_horizon: datetime = datetime.datetime(2015, 1, 1),
+                          today: datetime = datetime.datetime(2025, 3, 1),
+                          col: str = 'Open_adjusted',
+                          days: int = 3,
+                          state_func=get_state.get_state_by_perc_change
+                          ) -> []:
     """
     This function returns a transition probability matrix based on the frequency of past transitions.
 
@@ -53,44 +53,27 @@ def t_table_generator_by_prob(path: str,
     col: string name of column within the csv located at path that contains the desired values
     days: number of days included in each state; aka "state length"
     """
-    # TODO: remove Combinations, replace with States
     # print('pre-read: ' + str(time.time()))
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
-    att_list = state_func(df[col])
 
     # print('pre-data_series: ' + str(time.time()))
-    # data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
-    data_list = [att_list[i - 1:i + days] for i in range(1, len(att_list) - days)]
-
+    data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
     # data_list is currently set to start at item 2 for percent change calculations
 
-    data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
-    data_series = data_series * 100
-    # print(data_series)
-    # print('pre-state: ' + str(time.time()))
-    perc_changes = [state_func(data_series=state) for state in
-                    data_series]
+    data_series = pd.Series(data_list)
 
-    maxes = np.array([abs(percs).max() for percs in data_list])
-    print(maxes)
+    # print('pre-state: ' + str(time.time()))
+    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in data_series]
+    maxes = np.array([abs(percs).max() for percs in perc_changes])
     max_delta = maxes.max()
-    print(max_delta)
-    bins = 3
-    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=bins, max_delta=max_delta)
-                   for state in data_series]
     # print('max delta')
     # print(max_delta)
-    print(int_changes)
-    state_history1 = [StateWindow(state).as_tuple() for state in int_changes]
-    print(state_history1)
-    print(type(state_history1))
 
     state_history = [Combination(state_func
-                                 (data_series=state), max_delta=max_delta).get_combination() for state in data_series]
-    print(state_history)
-    print(type(state_history))
+                                 (data_series=state, state_width=1, min=state.min(),
+                                  max=state.max()), max_delta=max_delta).get_combination() for state in data_series]
     # print('post-state: ' + str(time.time()))
     combos = list({state for state in state_history})
     # print(combos)  # Only 12 of 27 possible combos are appearing
@@ -112,10 +95,7 @@ def t_table_generator_by_prob(path: str,
     # result_df.to_csv('transition_table.csv')
     return result_df
 
-
-def transition_fn_by_p_matrix(p_matrix: pd.DataFrame,
-                              current_state: tuple[int],
-                              steps: int = 1) -> pd.Series:
+def transition_fn_by_p_matrix(p_matrix:pd.DataFrame,current_state:tuple[int],steps:int=1)->pd.Series:
     """ Takes in a p_matrix table and the number of steps into the future to predict
     Arguments:
     p_matrix(pd.Series) ->  This is a dataframe where the index should be equal to the columns . Each row sums to one.
@@ -125,9 +105,9 @@ def transition_fn_by_p_matrix(p_matrix: pd.DataFrame,
     Returns:
     A series whose indices are the different states and the values are the probability of that state occurring
     """
-    assert p_matrix.index.isin(p_matrix.columns).all()  # the Index should be equal to the columns
-    assert p_matrix.apply(lambda row: row.sum() == 1).all()  # Each row should sum to 1
-    assert p_matrix.index.isin([current_state]).any()  # current_state should be in the index
+    assert p_matrix.index.isin(p_matrix.columns).all() # the Index should be equal to the columns 
+    assert p_matrix.apply(lambda row: row.sum() ==1).all() # Each row should sum to 1
+    assert p_matrix.index.isin([current_state]).any() # current_state should be in the index
     p_mat = p_matrix ** steps
 
     return p_mat.T[current_state]
@@ -135,7 +115,7 @@ def transition_fn_by_p_matrix(p_matrix: pd.DataFrame,
 def transition_fn_by_randomized_vector(current_state:State,validator:StateValidator)-> pd.Series:
     """Returns a Series whose indices are all the possible states and randomized probabilities assigned to each one"""
     all_states = list(validator.gen_state_space())
-    valid_states = [state for state in all_states if validator.is_next_state_valid(current_state, state)]
+    valid_states = [state for state in all_states if validator.is_next_state_valid(current_state,state)]
     num_valid_states = len(valid_states)
 
     rand_values = np.random.rand(num_valid_states)
@@ -145,6 +125,7 @@ def transition_fn_by_randomized_vector(current_state:State,validator:StateValida
         pd.Series(0, index=[state for state in all_states if state not in valid_states])
     ])
     return final_series
+
 
     # prob_dict = {state: 0 for state in all_states}
     # for state, prob in zip(valid_states, rand_values):
@@ -195,6 +176,9 @@ def transition_fn_by_lin_reg(current_state:State,validator:StateValidator) -> pd
     return pd.Series(bin_probs,index=states)
 
 def t_table_gen_by_lin_reg_og(validator:StateValidator) -> pd.DataFrame:
+    """
+    DOES NOT WORK YET
+    """
     to_ret:pd.DataFrame = pd.DataFrame()
     # Create a comprehensive list of all state keys as strings from the state space
     complete_index = [str(generated) for generated in validator.gen_state_space()]
