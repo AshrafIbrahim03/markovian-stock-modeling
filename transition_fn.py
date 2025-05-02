@@ -171,48 +171,47 @@ def transition_fn_by_lin_reg(current_state:State,validator:StateValidator) -> pd
 
     bin_probs = [cdf_s[i+1] - cdf_s[i] for (i,_) in enumerate(cdf_s[:-1])]
 
+    to_ret = pd.Series(bin_probs,index=states)
+    assert np.isclose(np.sum(to_ret),1), f"The sum over {current_state} is not one. The series is: {to_ret}"
     
 
-    return pd.Series(bin_probs,index=states)
-
-def t_table_gen_by_lin_reg_og(validator:StateValidator) -> pd.DataFrame:
-    """
-    DOES NOT WORK YET
-    """
-    to_ret:pd.DataFrame = pd.DataFrame()
-    # Create a comprehensive list of all state keys as strings from the state space
-    complete_index = [str(generated) for generated in validator.gen_state_space()]
-    for state in validator.gen_state_space():
-        prob_vec = transition_fn_by_lin_reg(state,validator)
-        new_index = [str((*state[1:], n)) for n in prob_vec.index]
-        prob_vec.index = new_index
-        # Reindex the Series to ensure it has all keys, filling missing values with 0
-        prob_vec = prob_vec.reindex(complete_index, fill_value=0)
-        assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
-        print(np.sum(prob_vec))
-        to_ret[str(state)] = prob_vec
-    
-    return to_ret.T
-
+    return to_ret
 def t_table_gen_by_lin_reg(validator:StateValidator) -> pd.DataFrame:
     """
-    DOES NOT WORK YET
+    Generate a transition probability table using a linear regression-based transition function.
+      The resulting transition table is ensured to be square and each column sums to 1.
+    
+    Arguments:
+      validator (StateValidator): The validator to generate a state space
+    
+    Returns:
+      pd.DataFrame:
+          A square DataFrame where both the rows and columns are states.
+          Each cell (i, j) represents the probability of transitioning from state i to state j.
     """
-    to_ret:pd.DataFrame = pd.DataFrame()
-    # Create a comprehensive list of all state keys as strings from the state space
-    complete_index = [str(generated) for generated in validator.gen_state_space()]
+    assert isinstance(validator,StateValidator), "Passed validator is not an instance of `StateValidator`"
+    complete_index = pd.Index([State(generated).as_tuple() for generated in validator.gen_state_space()])
+    print(complete_index)
+    to_ret:pd.DataFrame = pd.DataFrame(columns=complete_index)
     for state in validator.gen_state_space():
+        state = State(state)
+        print(state)
         zeroes = pd.Series(np.zeros(len(complete_index)),index=complete_index)
         prob_vec = transition_fn_by_lin_reg(state,validator)
-        new_index = [str((*state[1:], n)) for n in prob_vec.index]
+        # new_index = [str((*state[1:], n)) for n in prob_vec.index]
+        new_index = [state.get_next_state(n).as_tuple() for n in prob_vec.index]
         prob_vec.index = new_index
+        assert prob_vec.index.equals(pd.Index(new_index)), f"Not equal: new_index={new_index}\nprob_vec.index={prob_vec.index}"
 
-        
-
-        # # Reindex the Series to ensure it has all keys, filling missing values with 0
-        # prob_vec = prob_vec.reindex(complete_index, fill_value=0)
         assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
-        print(np.sum(prob_vec))
-        to_ret[str(state)] = prob_vec
+        # print(np.sum(prob_vec))
+        # print(prob_vec)
+        zeroes.update(prob_vec)
+        print(zeroes)
+        print(np.sum(zeroes))
+        to_ret[state.as_tuple()] = zeroes
     
-    return to_ret.T
+    assert to_ret.columns.size == to_ret.index.size, "Not a square t table"
+    
+    return to_ret
+
