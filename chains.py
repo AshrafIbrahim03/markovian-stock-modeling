@@ -49,13 +49,13 @@ class FirstMC(MarkovChain):
         return to_ret
 
 
-class FeedingMCException(Exception):
+class MCException(Exception):
     _error_type: int
 
     ILLEGAL_WINDOW_END = 1
 
     def __init__(self, err_type: int):
-        assert err_type == FeedingMCException.ILLEGAL_WINDOW_END
+        assert err_type == MCException.ILLEGAL_WINDOW_END
         self._error_type = err_type
 
     def get_error_code(self) -> int:
@@ -105,7 +105,7 @@ class FeedingPercAggMC(MarkovChain):
 
     def _step(self) -> State:
         if self.data_window_end > self.data.size:
-            raise FeedingMCException(FeedingMCException.ILLEGAL_WINDOW_END)
+            raise MCException(MCException.ILLEGAL_WINDOW_END)
         window = self.data[self.data_window_start : self.data_window_end]
         assert window.size == self.window_len
         current_state = State(tuple(get_state_by_perc_change(window)))
@@ -121,7 +121,7 @@ class FeedingPercAggMC(MarkovChain):
 
 
 class RandomizedMaxProbMC(MarkovChain):
-    """This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using"""
+    """This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using get_target_max"""
 
     current_state: State
     validator: StateValidator
@@ -146,6 +146,50 @@ class RandomizedMaxProbMC(MarkovChain):
         return next_state
 
     def step(self, num: int) -> list[State]:
+        to_ret: list[State] = []
+        for _ in range(num):
+            to_ret.append(self._step())
+
+        return to_ret
+
+class LinRegMC(MarkovChain):
+
+    data_window_start: int
+    data_window_end: int
+    window_len: int
+    data: pd.Series
+
+
+    def __init__(self,data:pd.Series,window_len:int):
+        self.data = data
+        self.data_window_start = 0
+        assert data.size > window_len
+        assert window_len > 0
+        self.data_window_end = window_len
+        self.window_len = window_len
+        self.validator = StateValidator(11, window_len)
+
+    def set_current_state(self, new_state: State):
+        assert self.validator.is_valid_state(new_state)
+
+        self.current_state = new_state
+
+    def get_current_state(self):
+        return self.current_state
+
+
+    def _step(self) -> State:
+        if self.data_window_end > self.data.size:
+            raise MCException(MCException.ILLEGAL_WINDOW_END)
+        window = self.data[self.data_window_start : self.data_window_end]
+        assert window.size == self.window_len
+        current_state = State(tuple(get_state_by_perc_change(window)))
+        next_state = transition_fn_by_lin_reg(current_state,self.validator)
+        self.data_window_start += 1
+        self.data_window_end += 1
+        return next_state
+    
+    def step(self,num:int) -> State:
         to_ret: list[State] = []
         for _ in range(num):
             to_ret.append(self._step())

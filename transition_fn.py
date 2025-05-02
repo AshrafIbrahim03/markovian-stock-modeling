@@ -5,8 +5,12 @@ import datetime
 import time
 from collections import Counter
 import json
-from state import State,StateValidator
-
+from state import State,StateValidator,ValidationException
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+import numpy as np
+import pandas as pd
+import scipy.stats as st
 
 #  The below Combination class will be replaced by the State object we create.
 #  As discussed, the state object must hold a pd.Series of signed integers.
@@ -128,6 +132,84 @@ def transition_fn_by_randomized_vector(current_state:State,validator:StateValida
     #     prob_dict[state] = prob
 
     # return pd.Series(prob_dict)
+
+
+
+def transition_fn_by_lin_reg(current_state:State,validator:StateValidator) -> pd.Series:
+    """ Computes the line of best fit over the current states and outputs the probabilities of
+        next states based on distance from the expected value
+
+        Returns a pd.Series with the states as the indices and the probabilities as values
+    """
+    if isinstance(current_state,State):
+        X:tuple[int] = current_state.as_tuple()
+    elif isinstance(current_state, tuple):
+        X = current_state
+        current_state = State(current_state)
+    else:
+        raise Exception("current_state must be State or tuple")
+    Y = np.arange(len(X))
+    # slope,intercept = np.polyfit(X,Y,1)
+    slope,intercept = np.polynomial.polynomial.Polynomial.fit(X,Y,deg=1)
+    # next_state has to be an int that falls within the ranges enforced by validator
+    next_state_int = int((slope * len(X)) + intercept)
+    next_state_int = int(np.clip(next_state_int,validator.get_min_attr(),validator.get_max_attr()))
+
+    mean = np.mean(current_state.as_tuple())
+
+    std = np.std(current_state.as_tuple())
+    if std == 0:# A stdev of 0 makes it so that all the probs are NaN so another value should be swapped in
+        stdevs = map(np.std,validator.gen_state_space())
+        non_zero_stdevs = filter(lambda x: x!=0,stdevs)
+        min_std = min(non_zero_stdevs) / 2
+        std = min_std
+    bins = np.arange(validator.get_min_attr() - 0.5, validator.get_max_attr() + 1, 1)
+    bins[0] = -1* np.inf
+    bins[-1] = np.inf
+    cdf_s = st.norm.cdf(x=bins,loc=mean,scale=std)
+    states = np.arange(validator.get_min_attr(),validator.get_max_attr()+1,1)
+
+    bin_probs = [cdf_s[i+1] - cdf_s[i] for (i,_) in enumerate(cdf_s[:-1])]
+
     
 
-# transition_fn_by_prob('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
+    return pd.Series(bin_probs,index=states)
+
+def t_table_gen_by_lin_reg_og(validator:StateValidator) -> pd.DataFrame:
+    to_ret:pd.DataFrame = pd.DataFrame()
+    # Create a comprehensive list of all state keys as strings from the state space
+    complete_index = [str(generated) for generated in validator.gen_state_space()]
+    for state in validator.gen_state_space():
+        prob_vec = transition_fn_by_lin_reg(state,validator)
+        new_index = [str((*state[1:], n)) for n in prob_vec.index]
+        prob_vec.index = new_index
+        # Reindex the Series to ensure it has all keys, filling missing values with 0
+        prob_vec = prob_vec.reindex(complete_index, fill_value=0)
+        assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
+        print(np.sum(prob_vec))
+        to_ret[str(state)] = prob_vec
+    
+    return to_ret.T
+
+def t_table_gen_by_lin_reg(validator:StateValidator) -> pd.DataFrame:
+    """
+    DOES NOT WORK YET
+    """
+    to_ret:pd.DataFrame = pd.DataFrame()
+    # Create a comprehensive list of all state keys as strings from the state space
+    complete_index = [str(generated) for generated in validator.gen_state_space()]
+    for state in validator.gen_state_space():
+        zeroes = pd.Series(np.zeros(len(complete_index)),index=complete_index)
+        prob_vec = transition_fn_by_lin_reg(state,validator)
+        new_index = [str((*state[1:], n)) for n in prob_vec.index]
+        prob_vec.index = new_index
+
+        
+
+        # # Reindex the Series to ensure it has all keys, filling missing values with 0
+        # prob_vec = prob_vec.reindex(complete_index, fill_value=0)
+        assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
+        print(np.sum(prob_vec))
+        to_ret[str(state)] = prob_vec
+    
+    return to_ret.T
