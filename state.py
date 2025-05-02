@@ -1,4 +1,4 @@
-from itertools import combinations_with_replacement
+from itertools import product 
 class State:
     """
         This class represents a state in a Markov Chain. It abstracts a tuple of integers. The most recent state is the last element in a tuple
@@ -138,4 +138,4 @@ class StateValidator:
     def gen_state_space(self):
         max_bin = self.get_max_attr()
         assert type(max_bin) == int
-        return combinations_with_replacement(range(-1*max_bin, max_bin+1), self.window_len)
+        return product(range(-1*max_bin, max_bin+1), repeat=self.window_len)
