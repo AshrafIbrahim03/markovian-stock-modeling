@@ -1,13 +1,8 @@
-import pandas as pd
-import numpy as np
 import get_state
 import datetime
 import time
 from collections import Counter
-import json
-from state import State,StateValidator,ValidationException
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import LabelEncoder
+from state import State, StateValidator, ValidationException
 import numpy as np
 import pandas as pd
 import scipy.stats as st
@@ -53,46 +48,37 @@ def t_table_generator_by_prob(path: str,
     col: string name of column within the csv located at path that contains the desired values
     days: number of days included in each state; aka "state length"
     """
-    # print('pre-read: ' + str(time.time()))
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
 
-    # print('pre-data_series: ' + str(time.time()))
-    data_list = [df[col][i - 1:i + days] for i in range(1, len(df) - days)]
+    att_list = state_func(df[col])  # convert input values to percentages
+
+    data_list = [att_list[i - 1:i + days - 1] for i in range(1, len(att_list) - days)]
     # data_list is currently set to start at item 2 for percent change calculations
 
-    data_series = pd.Series(data_list)
+    data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
+    data_series = data_series * 100
 
-    # print('pre-state: ' + str(time.time()))
-    perc_changes = [state_func(data_series=state, state_width=1, min=state.min(), max=state.max()) for state in data_series]
-    maxes = np.array([abs(percs).max() for percs in perc_changes])
-    max_delta = maxes.max()
-    # print('max delta')
-    # print(max_delta)
+    maxes = np.array([abs(percs).max() for percs in data_series])
+    max_delta = maxes.max()  # maximum percent change defines the bin range for integerization
+    bins = 3
+    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=bins, max_delta=max_delta)
+                   for state in data_series]
 
-    state_history = [Combination(state_func
-                                 (data_series=state, state_width=1, min=state.min(),
-                                  max=state.max()), max_delta=max_delta).get_combination() for state in data_series]
-    # print('post-state: ' + str(time.time()))
+    state_history = [State(state).as_tuple() for state in int_changes]
+
     combos = list({state for state in state_history})
-    # print(combos)  # Only 12 of 27 possible combos are appearing
-    # print('post-combos: ' + str(time.time()))
-    #
-    # state_history = pd.Series(state_history)
-    # counts = state_history[:-1].value_counts()
-    counts = Counter(state_history[:-1])  # How many times each state appears in the history
-    # print('post state history series: ' + str(time.time()))
+    # print(combos)  # Only 20 of 27 possible combos are appearing
 
-    # combos = state_history.unique()  # returns np array
+    counts = Counter(state_history[:-1])  # How many times each state appears in the history
+
     pairs = list(zip(state_history[:-1], state_history[1:]))
-    # print('post zip: ' + str(time.time()))
 
     data = [[pairs.count((i, j)) / counts[i] if counts[i] > 0 else 0
              for j in combos]
             for i in combos]
     result_df = pd.DataFrame(data, index=combos, columns=combos)
-    # result_df.to_csv('transition_table.csv')
     return result_df
 
 def transition_fn_by_p_matrix(p_matrix:pd.DataFrame,current_state:tuple[int],steps:int=1)->pd.Series:
@@ -176,6 +162,7 @@ def transition_fn_by_lin_reg(current_state:State,validator:StateValidator) -> pd
     
 
     return to_ret
+
 def t_table_gen_by_lin_reg(validator:StateValidator) -> pd.DataFrame:
     """
     Generate a transition probability table using a linear regression-based transition function.
@@ -189,7 +176,7 @@ def t_table_gen_by_lin_reg(validator:StateValidator) -> pd.DataFrame:
           A square DataFrame where both the rows and columns are states.
           Each cell (i, j) represents the probability of transitioning from state i to state j.
     """
-    assert isinstance(validator,StateValidator), "Passed validator is not an instance of `StateValidator`"
+    assert isinstance(validator, StateValidator), "Passed validator is not an instance of `StateValidator`"
     complete_index = pd.Index([State(generated).as_tuple() for generated in validator.gen_state_space()])
     to_ret:pd.DataFrame = pd.DataFrame(columns=complete_index)
     for state in validator.gen_state_space():
@@ -209,3 +196,5 @@ def t_table_gen_by_lin_reg(validator:StateValidator) -> pd.DataFrame:
     
     return to_ret
 
+
+t_table_generator_by_prob(path='/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
