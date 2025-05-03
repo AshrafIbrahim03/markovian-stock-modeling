@@ -27,7 +27,7 @@ def get_target(t_table: pd.DataFrame,
     return result_state, result_prob
 
 
-def get_target_max(prob_series:pd.Series)-> int:
+def get_target_max(prob_series: pd.Series) -> tuple[int]:
     """ Chooses most likely target from array of possible states and their associated probabilities
     Arguments:
     prob_series:pd.Series -> This is a series whose values are the probability that the index will occur.

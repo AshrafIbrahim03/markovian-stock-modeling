@@ -9,11 +9,11 @@ import scipy.stats as st
 
 
 # For testing purposes, it is ok to use the below transition function with all default args
-def t_table_generator_by_prob(path: str,
+def t_table_generator_by_prob(df: pd.DataFrame,
                               year_horizon: datetime = datetime.datetime(2015, 1, 1),
                               today: datetime = datetime.datetime(2025, 3, 1),
-                              col: str = 'Open_adjusted',
                               days: int = 3,
+                              att_num: int = 3,
                               state_func=get_state.get_state_by_perc_change
                               ) -> []:
     """
@@ -24,10 +24,10 @@ def t_table_generator_by_prob(path: str,
     col: string name of column within the csv located at path that contains the desired values
     days: number of days included in each state; aka "state length"
     """
-    df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
 
+    col = 'Open_adjusted'
     att_list = state_func(df[col])  # convert input values to percentages
 
     data_list = [att_list[i - 1:i + days - 1] for i in range(1, len(att_list) - days)]
@@ -38,8 +38,7 @@ def t_table_generator_by_prob(path: str,
 
     maxes = np.array([abs(percs).max() for percs in data_series])
     max_delta = maxes.max()  # maximum percent change defines the bin range for integerization
-    bins = 3
-    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=bins, max_delta=max_delta)
+    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=att_num, max_delta=max_delta)
                    for state in data_series]
 
     state_history = [State(state).as_tuple() for state in int_changes]

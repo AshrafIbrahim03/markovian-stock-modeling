@@ -1,4 +1,5 @@
 #! ./venv/bin/python
+import get_state
 from get_state import (
     get_state_by_percentile,
     get_state_by_zscore,
@@ -120,6 +121,52 @@ class FeedingPercAggMC(MarkovChain):
             to_ret.append(self._step())
 
 
+class FreqModelMC(MarkovChain):
+    current_state: State
+    cur_state_index: int = 0
+    p_matrix: pd.DataFrame = None
+
+    def __init__(self, initial_state: State, df, year_horizon, today, days, att_num, sample_range,
+                 state_func=get_state.get_state_by_perc_change):
+        # year horizon and today define training range, sample range for output comparison
+        self.current_state = initial_state
+        self.p_matrix = t_table_generator_by_prob(df, year_horizon, today, days, att_num, state_func)
+        self.df = df
+        self.year_horizon = year_horizon
+        self.today = today
+        self.days = days
+        self.att_num = att_num
+        self.sample_range = sample_range
+        self.state_func = state_func
+
+
+    def set_current_state(self, new_state: State):
+        assert len(new_state) == len(self.current_state)
+        self.current_state = new_state
+
+    def get_current_state(self):
+        return self.current_state
+
+    def regen_p_matrix(self):
+        self.p_matrix = t_table_generator_by_prob(self.df, self.year_horizon, self.today, self.days, self.att_num, self.state_func)
+
+    def _step(self) -> State:
+        window = self.all_states[self.cur_state_index: self.cur_state_index + self.days]
+        # starts at zero, then increments by one
+        cur_state = State(window[self.cur_state_index])
+        self.cur_state_index += 1
+        next_state_probs = self.p_matrix.loc[cur_state.as_tuple()]
+        next_state = get_target_max(next_state_probs)
+        print(f"{cur_state}->{next_state}")
+        return State(next_state)
+
+    def step(self,
+             num: int) -> list[State]:
+        to_ret: list[State] = []
+        for _ in range(num):
+            to_ret.append(self._step())
+        return to_ret
+
 class RandomizedMaxProbMC(MarkovChain):
     """This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using get_target_max"""
 
@@ -182,7 +229,6 @@ class LinRegMC(MarkovChain):
 
     def get_current_state(self):
         return self.current_state
-
 
     def _step(self) -> State:
         window = next(self.buffer_reader)

@@ -65,7 +65,7 @@ def get_state_by_perc_change(data_series: pd.Series):
     return perc_change
 
 
-def integerize_state(data_series: pd.Series, num_bins: int, max_delta: float):
+def integerize_state(data_series: pd.Series, num_bins: int, max_delta: float) -> tuple:
     # TODO: investigate why output is
     if num_bins % 2 != 1:
         print("Even bin count supplied! Bin count raised by 1 to become odd.")
