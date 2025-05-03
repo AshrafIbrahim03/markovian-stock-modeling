@@ -7,9 +7,10 @@ from get_state import (
 from get_target import get_target, get_target_max
 from abc import ABC, abstractmethod
 import pandas as pd
-from transition_fn import t_table_generator_by_prob, transition_fn_by_randomized_vector,transition_fn_by_lin_reg
+from transition_fn import t_table_generator_by_prob, transition_fn_by_randomized_vector,transition_fn_by_lin_reg, t_table_gen_by_lin_reg
 from state import StateValidator, State
 import datetime
+from buffer_reader import BufferReader
 
 
 class MarkovChain(ABC):
@@ -154,20 +155,26 @@ class RandomizedMaxProbMC(MarkovChain):
 
 class LinRegMC(MarkovChain):
 
-    data_window_start: int
-    data_window_end: int
     window_len: int
-    data: pd.Series
+    p_matrix:pd.DataFrame
+    validator:StateValidator
+    buffer_reader:BufferReader 
+    mean:int
+    std:int
 
 
-    def __init__(self,data:pd.Series,window_len:int):
-        self.data = data
-        self.data_window_start = 0
-        assert data.size > window_len
-        assert window_len > 0
-        self.data_window_end = window_len
+    def __init__(self,data:pd.Series,window_len:int,num_bins:int,mean:float = 0,std:float = 1):
+        """
+        data: The raw data to go over and do regression over
+        window_len: Length of the data window to use
+        num_bins: Same num_bins that should be passed to `StateValidator`
+        """
+        self.buffer_reader = BufferReader(data,window_len)
         self.window_len = window_len
-        self.validator = StateValidator(11, window_len)
+        self.validator = StateValidator(num_bins, window_len)
+        self.p_matrix = t_table_gen_by_lin_reg(self.validator)
+        self.mean = mean
+        self.std = std
 
     def set_current_state(self, new_state: State):
         assert self.validator.is_valid_state(new_state)
@@ -179,15 +186,15 @@ class LinRegMC(MarkovChain):
 
 
     def _step(self) -> State:
-        if self.data_window_end > self.data.size:
-            raise MCException(MCException.ILLEGAL_WINDOW_END)
-        window = self.data[self.data_window_start : self.data_window_end]
-        assert window.size == self.window_len
-        current_state = State(tuple(get_state_by_perc_change(window)))
-        next_state = transition_fn_by_lin_reg(current_state,self.validator)
-        self.data_window_start += 1
-        self.data_window_end += 1
-        return next_state
+        window = next(self.buffer_reader)
+        # print(window)
+        current_state = State(tuple(get_state_by_zscore(window,states=self.validator.num_bins,mean=self.mean,stdev=self.std)))
+        assert self.validator.is_valid_state(current_state), f"{current_state} is not a valid state"
+        # next_state = transition_fn_by_lin_reg(current_state,self.validator)
+        next_state_probs = self.p_matrix[current_state.as_tuple()]
+        next_state = get_target_max(next_state_probs)
+        print(f"{current_state}->{next_state}")
+        return State(next_state)
     
     def step(self,num:int) -> State:
         to_ret: list[State] = []
