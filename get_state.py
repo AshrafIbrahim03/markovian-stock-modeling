@@ -21,7 +21,7 @@ def get_state_by_zscore(data_series:pd.Series,states:int = 6, state_width:float=
         stdev(float): The standard deviation to compute z-scores with
     """
     z_scores = (data_series - mean) /stdev 
-    scores = np.clip(z_scores,-(states/2 * state_width),(states/2 * state_width))
+    scores = np.clip(z_scores,-(np.floor(states/2) * state_width),(np.floor(states/2) * state_width))
     bins = [-(states/2 * state_width) + (state_width * i) for i in range(states)]
 
     return  np.round(scores / state_width) * state_width
