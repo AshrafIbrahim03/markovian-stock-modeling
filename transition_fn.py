@@ -171,9 +171,9 @@ def t_table_gen_by_lin_reg(validator: StateValidator) -> pd.DataFrame:
         assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
         zeroes.update(prob_vec)
         to_ret[state.as_tuple()] = zeroes
-    
+
     assert to_ret.columns.size == to_ret.index.size, "Not a square t table"
-    
+
     return to_ret
 
 

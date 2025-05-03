@@ -98,7 +98,6 @@ class FeedingPercAggMC(MarkovChain):
         assert len(new_state) == len(self.current_state)
         assert type(new_state) is State
         assert self.validator.is_valid_state(new_state)
-
         self.current_state = new_state
 
     def get_current_state(self):
@@ -158,7 +157,7 @@ class LinRegMC(MarkovChain):
     window_len: int
     p_matrix:pd.DataFrame
     validator:StateValidator
-    buffer_reader:BufferReader 
+    buffer_reader:BufferReader
     mean:int
     std:int
 
