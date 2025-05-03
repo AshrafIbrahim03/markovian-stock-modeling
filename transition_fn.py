@@ -177,4 +177,3 @@ def t_table_gen_by_lin_reg(validator: StateValidator) -> pd.DataFrame:
     return to_ret
 
 
-t_table_generator_by_prob(path='/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
