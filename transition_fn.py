@@ -9,8 +9,6 @@ import scipy.stats as st
 
 
 # For testing purposes, it is ok to use the below transition function with all default args
-
-
 def t_table_generator_by_prob(path: str,
                               year_horizon: datetime = datetime.datetime(2015, 1, 1),
                               today: datetime = datetime.datetime(2025, 3, 1),
@@ -160,31 +158,23 @@ def t_table_gen_by_lin_reg(validator: StateValidator) -> pd.DataFrame:
     """
     assert isinstance(validator, StateValidator), "Passed validator is not an instance of `StateValidator`"
     complete_index = pd.Index([State(generated).as_tuple() for generated in validator.gen_state_space()])
-    print(complete_index)
     to_ret: pd.DataFrame = pd.DataFrame(columns=complete_index)
     for state in validator.gen_state_space():
         state = State(state)
-        print(state)
-        zeroes = pd.Series(np.zeros(len(complete_index)), index=complete_index)
-        prob_vec = transition_fn_by_lin_reg(state, validator)
+        zeroes = pd.Series(np.zeros(len(complete_index)),index=complete_index)
+        prob_vec = transition_fn_by_lin_reg(state,validator)
         # new_index = [str((*state[1:], n)) for n in prob_vec.index]
         new_index = [state.get_next_state(n).as_tuple() for n in prob_vec.index]
         prob_vec.index = new_index
-        assert prob_vec.index.equals(
-            pd.Index(new_index)), f"Not equal: new_index={new_index}\nprob_vec.index={prob_vec.index}"
+        assert prob_vec.index.equals(pd.Index(new_index)), f"Not equal: new_index={new_index}\nprob_vec.index={prob_vec.index}"
 
-        assert np.isclose(np.sum(prob_vec), 1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
-        # print(np.sum(prob_vec))
-        # print(prob_vec)
+        assert np.isclose(np.sum(prob_vec),1), f"prob_vec for {state} is not 1 but is {np.sum(prob_vec)}"
         zeroes.update(prob_vec)
-        print(zeroes)
-        print(np.sum(zeroes))
         to_ret[state.as_tuple()] = zeroes
-
+    
     assert to_ret.columns.size == to_ret.index.size, "Not a square t table"
-
+    
     return to_ret
 
 
-t_table_generator_by_prob(
-    path='/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
+t_table_generator_by_prob(path='/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')

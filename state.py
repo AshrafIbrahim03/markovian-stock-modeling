@@ -1,21 +1,21 @@
 from itertools import product 
+import numpy as np
 class State:
     """
         This class represents a state in a Markov Chain. It abstracts a tuple of integers. The most recent state is the last element in a tuple
     """
     state_window: tuple[int]
     def __init__(self,state_win: tuple[int]):
+        assert isinstance(state_win,tuple), f"Passed state window, {state_win} is not a `tuple[int]`"
         self.state_window = state_win
 
     def __eq__(self, value) -> bool:
         assert type(value) == State
         assert len(self.state_window) == len(value.state_window)# Two windows must have the same length to even see if they're equal
 
-        for (s1, s2) in zip(self.state_window, value.state_window):
-            if s1 is not s2:
-                return False
-        return True
+        return self.as_tuple() == value.as_tuple()
 
+        
     def as_tuple(self) -> tuple[int]:
         return self.state_window
     
@@ -85,14 +85,16 @@ class StateValidator:
         An int based on what is not valid. Refer to `ValidationException` for more details.
         """
         assert type(window) == State
-        max_state = (self.num_bins-1) /2
+        max_attr = self.get_max_attr()
         states = tuple(map(lambda x: abs(x),window.as_tuple()))
-        if not all(map(lambda val: val <=max_state,states)):
-            return ValidationException.ILLEGAL_BIN
+        if all(map(lambda val: val <=max_attr,states)):
+            return True 
+        elif not all(map(lambda x: round(x) == x,window.as_tuple() )):
+            return False
         elif len(window) == self.window_len:
-            return ValidationException.ILLEGAL_STATE_LEN
+            return False
         
-        return ValidationException.LEGAL_STATE
+        return True
     
     def is_next_state_valid(self,current_state:State,next_state:State) -> int:
         """ Makes sure that the `next_state` passed can actually happen after the `current_state`
