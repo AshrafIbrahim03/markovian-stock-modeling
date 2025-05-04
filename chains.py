@@ -224,9 +224,10 @@ class LinRegMC(MarkovChain):
     buffer_reader:BufferReader
     mean:int
     std:int
+    state_width:int
 
 
-    def __init__(self,data:pd.Series,window_len:int,num_bins:int,mean:float = 0,std:float = 1):
+    def __init__(self,data:pd.Series,window_len:int,num_bins:int,mean:float = 0,std:float = 1,state_width:int=1):
         """
         data: The raw data to go over and do regression over
         window_len: Length of the data window to use
@@ -240,6 +241,7 @@ class LinRegMC(MarkovChain):
         self.p_matrix = t_table_gen_by_lin_reg(self.validator)
         self.mean = mean
         self.std = std
+        self.state_width= state_width 
 
     def set_current_state(self, new_state: State):
         assert self.validator.is_valid_state(new_state)
@@ -248,11 +250,14 @@ class LinRegMC(MarkovChain):
 
     def get_current_state(self):
         return self.current_state
+    
+    def get_states(self,raw_data:pd.Series):
+        return get_state_by_zscore(raw_data,states=self.validator.num_bins,state_width=self.state_width,mean=self.mean,stdev=self.std)
 
     def _step(self) -> State:
         window = next(self.buffer_reader)
         # print(window)
-        current_state = State(tuple(get_state_by_zscore(window,states=self.validator.num_bins,mean=self.mean,stdev=self.std)))
+        current_state = State(tuple(self.get_states(window)))
         assert self.validator.is_valid_state(current_state), f"{current_state} is not a valid state"
         # next_state = transition_fn_by_lin_reg(current_state,self.validator)
         next_state_probs = self.p_matrix[current_state.as_tuple()]
