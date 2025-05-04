@@ -23,4 +23,7 @@ class BufferReader:
         current_window = self.data[self.index:end_index]
         self.index+=1
         return current_window
+
+    def reset_buffer(self):
+        self.index = 0
     
