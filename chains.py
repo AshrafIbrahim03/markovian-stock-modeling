@@ -25,6 +25,11 @@ class MarkovChain(ABC):
 
     @abstractmethod
     def step(self, num: int):
+        """Generates steps in the Markov Chain.
+
+        Args:
+            num (int): The number of steps to predict in the future
+        """
         pass
 
 
@@ -200,6 +205,11 @@ class RandomizedMaxProbMC(MarkovChain):
         return to_ret
 
 class LinRegMC(MarkovChain):
+    """
+    Does linear regression over the state and predicts next state from there.
+    This class uses get_state_by_zscore to classify states
+    This class uses get_target_max to choose the next most likely state
+    """
 
     window_len: int
     p_matrix:pd.DataFrame
@@ -214,6 +224,8 @@ class LinRegMC(MarkovChain):
         data: The raw data to go over and do regression over
         window_len: Length of the data window to use
         num_bins: Same num_bins that should be passed to `StateValidator`
+        mean: The mean to be used for z score classification
+        std: The standard deviation to be used for z score classification
         """
         self.buffer_reader = BufferReader(data,window_len)
         self.window_len = window_len

@@ -1,6 +1,11 @@
 import pandas as pd
 
 class BufferReader:
+    """Windowed iterator over the input data 
+
+    Raises:
+        StopIteration: when there's no more data to iterate over
+    """
     data:pd.Series
     window_size:int
     index:int
