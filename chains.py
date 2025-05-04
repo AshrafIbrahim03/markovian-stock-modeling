@@ -31,7 +31,14 @@ class MarkovChain(ABC):
             num (int): The number of steps to predict in the future
         """
         pass
+    @abstractmethod
+    def get_states(raw_data:pd.Series):
+        """Classifies states for the given chain
 
+        Args:
+            raw_data (pd.Series): The data to be classified
+        """
+        pass
 
 class FirstMC(MarkovChain):
     current_state: str
