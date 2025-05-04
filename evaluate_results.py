@@ -103,5 +103,20 @@ class Evaluator():
         to_ret["is_prediction_correct"] = to_ret['actual_state'].apply(tuple) == to_ret['predicted_state'].apply(tuple)
         
         return to_ret
+    def get_perc_correct(self,chain:MarkovChain,num_days:int)-> float:
+        next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
+        raw_windows = (next(self.buffer_reader) for _ in range(num_days))
+        actual_states = (tuple(chain.get_states(window)) for window in raw_windows)
+        predicted_states = (state.as_tuple() for state in chain.step(num_days))
+
+        num_correct = 0
+        num_iterated = 0
+        for (actual,pred) in zip(actual_states,predicted_states):
+            if tuple(actual) == tuple(pred):
+                num_correct+=1
+            num_iterated+=1
+        
+        return num_correct / num_iterated
+            
 
     
