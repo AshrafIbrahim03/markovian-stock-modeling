@@ -9,7 +9,7 @@ import os
 
 from state import State
 
-df = pd.read_csv('/Users/walkerwatson/PycharmProjects/markovian-stock-modeling/data/inflation_adjusted_berkshire_stocks.csv')
+df = pd.read_csv('./data/inflation_adjusted_berkshire_stocks.csv')
 df = pd.Series(df['Open_adjusted'])
 linreg = chains.LinRegMC(df, 3, num_bins=3)
 
