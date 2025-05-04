@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import datetime
 import chains
 from chains import MarkovChain, FreqModelMC
@@ -6,8 +7,9 @@ import transition_fn
 import get_state
 import get_target
 import os
+from buffer_reader import BufferReader
 
-from state import State
+from state import State,StateValidator
 
 df = pd.read_csv('./data/inflation_adjusted_berkshire_stocks.csv')
 df = pd.Series(df['Open_adjusted'])
@@ -60,9 +62,46 @@ class ChainEvaluator:
         # !may need to change type here!
 
     def day_is_correct(self, day:datetime.datetime):
-        if
+        # if
+        pass
 
     def regen_p_matrix(self):
         """
         Only for chains like Freq model that keep a running p matrix
         """
+
+
+class Evaluator():
+    
+    chain:MarkovChain
+    buffer_reader:BufferReader
+    val:StateValidator
+    def __init__(self,data:pd.Series,val:StateValidator):
+        """Instantiates Evaluator object
+
+        Args:
+            data (pd.Series): The data to compare against
+        """
+        self.val = val
+        self.buffer_reader = BufferReader(data,self.val.window_len)
+
+    def evaluate_as_df(self,chain:MarkovChain,num_days:int)->pd.DataFrame:
+        """Evaluates the MarkovChain
+
+        Args:
+            num_days (int): The number of days to evaluate over
+            chain (MarkovChain): The MarkovChain to be evaluated. We can't store this as a class variable because we can't easily restart the MarkovChain
+
+        Returns:
+            pd.DataFrame: A dataframe with columns: ["predicted_state","actual_state","is_prediction_correct"]. predicted_state will be tuple[int], actual_state will be tuple[int], is_prediction_correct is a boolean representing if the prediction is correct
+        """
+        to_ret = pd.DataFrame(columns=["run","predicted_state","actual_state","is_prediction_correct"])
+        to_ret["predicted_state"] = [state.as_tuple() for state in chain.step(num_days)]
+        next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
+        raw_windows = (next(self.buffer_reader) for _ in range(num_days))
+        to_ret["actual_state"] = [tuple(chain.get_states(window)) for window in raw_windows]
+        to_ret["is_prediction_correct"] = to_ret['actual_state'].apply(tuple) == to_ret['predicted_state'].apply(tuple)
+        
+        return to_ret
+
+    
