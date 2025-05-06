@@ -143,6 +143,7 @@ class FreqModelMC(MarkovChain):
         # year horizon and today define training range, sample range for output comparison
         df['Date'] = pd.to_datetime(df['Date'])
         df = df[(train_range[0] < df['Date']) & (df['Date'] <= train_range[1])]
+        df = df.reset_index()
         self.cur_state_index = df[df['Date'] == sample_range[0]].index[0]  # cur_index starts at first day in sample range
         # TODO: add error handling when invalid sample dates given
         if self.cur_state_index == -1:
@@ -175,7 +176,9 @@ class FreqModelMC(MarkovChain):
         # starts at zero, then increments by one
         cur_state = State(self.all_states[self.cur_state_index])
         self.cur_state_index += 1
-        next_state_probs = self.p_matrix.loc[cur_state.as_tuple()]
+
+        next_state_probs = self.p_matrix.loc[[cur_state.as_tuple()]].squeeze()
+        print(next_state_probs.loc[[(0, 0, 0)]])
         next_state = get_target_max(next_state_probs)
         print(f"{cur_state}->{next_state}")
         return State(next_state)
