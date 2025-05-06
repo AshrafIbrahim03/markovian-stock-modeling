@@ -118,5 +118,11 @@ class Evaluator():
         
         return num_correct / num_iterated
             
+df = pd.read_csv('data/inflation_adjusted_berkshire_stocks.csv')
+data = df['Open_adjusted']
 
-    
+validator = StateValidator(3, 3)
+eval = Evaluator(data=data, val=validator)
+init_state = State(tuple([0, 0, 0]))
+chain = FreqModelMC(init_state, df, datetime.datetime(2015, 1, 1), datetime.datetime(2025, 3, 1), 3, 3, sample_range=())
+eval.get_perc_correct()

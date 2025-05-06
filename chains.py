@@ -138,19 +138,24 @@ class FreqModelMC(MarkovChain):
     cur_state_index: int = 0
     p_matrix: pd.DataFrame = None
 
-    def __init__(self, initial_state: State, df, year_horizon, today, days, att_num, sample_range,
+    def __init__(self, df, year_horizon, today, days, att_num, sample_range,
                  state_func=get_state.get_state_by_perc_change):
         # year horizon and today define training range, sample range for output comparison
-        self.current_state = initial_state
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
+
+        # create list of states using days and att_num parameters
+        self.all_states = get_state.state_list(df['Open_adjusted'], state_func, att_num, days)
+        self.cur_state_index = df[df['Date'] == sample_range[0]].index  # cur_index starts at first day in sample range
+
         self.p_matrix = t_table_generator_by_prob(df, year_horizon, today, days, att_num, state_func)
         self.df = df
-        self.year_horizon = year_horizon
-        self.today = today
+        self.year_horizon = year_horizon  # lower bound of training range
+        self.today = today  # upper bound of training range
         self.days = days
         self.att_num = att_num
         self.sample_range = sample_range
         self.state_func = state_func
-
 
     def set_current_state(self, new_state: State):
         assert len(new_state) == len(self.current_state)
@@ -160,6 +165,9 @@ class FreqModelMC(MarkovChain):
         return self.current_state
 
     def regen_p_matrix(self):
+        """
+        To be used when parameters or data needs to change without creating a new Chain
+        """
         self.p_matrix = t_table_generator_by_prob(self.df, self.year_horizon, self.today, self.days, self.att_num, self.state_func)
 
     def _step(self) -> State:

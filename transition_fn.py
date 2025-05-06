@@ -26,20 +26,8 @@ def t_table_generator_by_prob(df: pd.DataFrame,
     """
     df['Date'] = pd.to_datetime(df['Date'])
     df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
-
     col = 'Open_adjusted'
-    att_list = state_func(df[col])  # convert input values to percentages
-
-    data_list = [att_list[i - 1:i + days - 1] for i in range(1, len(att_list) - days)]
-    # data_list is currently set to start at item 2 for percent change calculations
-
-    data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
-    data_series = data_series * 100
-
-    maxes = np.array([abs(percs).max() for percs in data_series])
-    max_delta = maxes.max()  # maximum percent change defines the bin range for integerization
-    int_changes = [get_state.integerize_state(data_series=pd.Series(state), num_bins=att_num, max_delta=max_delta)
-                   for state in data_series]
+    int_changes = get_state.state_list(df[col], state_func, att_num, days)
 
     state_history = [State(state).as_tuple() for state in int_changes]
 

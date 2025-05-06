@@ -11,7 +11,9 @@ class MyTestCase(unittest.TestCase):
         current_dir = os.path.dirname(__file__)
         root = os.path.abspath(os.path.join(current_dir, '..'))
         data_path = os.path.join(root, 'data', 'inflation_adjusted_berkshire_stocks.csv')
-        result = transition_fn.t_table_generator_by_prob(path=data_path)
+        df = pd.read_csv(data_path)
+
+        result = transition_fn.t_table_generator_by_prob(df=df)
         check = result.sum(axis=1)
         assert np.isclose(check, 1, atol=1e-6).all()
 
@@ -19,8 +21,9 @@ class MyTestCase(unittest.TestCase):
         current_dir = os.path.dirname(__file__)
         root = os.path.abspath(os.path.join(current_dir, '..'))
         data_path = os.path.join(root, 'data', 'inflation_adjusted_berkshire_stocks.csv')
+        df = pd.read_csv(data_path)
 
-        result = transition_fn.t_table_generator_by_prob(path=data_path)
+        result = transition_fn.t_table_generator_by_prob(df=df)
         for index, row in result.iterrows():  # for three-attribute states specifically
             to_index = index[1:]
             cols = [col for col in result.columns if col[:2] != to_index]

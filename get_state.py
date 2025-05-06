@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
 
-
-
+from state import State
 
 
 def get_state_by_zscore(data_series:pd.Series,states:int = 6, state_width:float= 1,mean:float=0,stdev:float=20)-> pd.Series:
@@ -74,4 +73,22 @@ def integerize_state(data_series: pd.Series, num_bins: int, max_delta: float) ->
     shift = int((num_bins + 1) / 2)
     score = tuple(np.digitize(data_series, thresholds, right=False) - shift)
     return score
+
+
+def state_list(series, state_func, att_num, days):
+    att_list = state_func(series)  # convert input values to percentages
+
+    data_list = [att_list[i - 1:i + days - 1] for i in range(1, len(att_list) - days)]
+    # data_list is currently set to start at item 2 for percent change calculations
+
+    data_series = pd.Series(data_list)  # list of lists of pre-portioned state data
+    data_series = data_series * 100
+
+    maxes = np.array([abs(percs).max() for percs in data_series])
+    max_delta = maxes.max()  # maximum percent change defines the bin range for integerization
+    int_changes = [integerize_state(data_series=pd.Series(state), num_bins=att_num, max_delta=max_delta)
+                   for state in data_series]
+
+    # state_history = [State(state).as_tuple() for state in int_changes]
+    return int_changes
 
