@@ -96,10 +96,14 @@ class Evaluator():
             pd.DataFrame: A dataframe with columns: ["predicted_state","actual_state","is_prediction_correct"]. predicted_state will be tuple[int], actual_state will be tuple[int], is_prediction_correct is a boolean representing if the prediction is correct
         """
         to_ret = pd.DataFrame(columns=["run","predicted_state","actual_state","is_prediction_correct"])
-        to_ret["predicted_state"] = [state.as_tuple() for state in chain.step(num_days)]
-        next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
-        raw_windows = (next(self.buffer_reader) for _ in range(num_days))
-        to_ret["actual_state"] = [tuple(chain.get_states(window)) for window in raw_windows]
+        if isinstance(chain, FreqModelMC):
+            rows = [(state[0].as_tuple(), state[1].as_tuple()) for state in chain.step(num_days)]
+            to_ret[["predicted_state", "actual_state"]] = pd.DataFrame(rows)
+        else:
+            to_ret["predicted_state"] = [state[0].as_tuple() for state in chain.step(num_days)]
+            next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
+            raw_windows = (next(self.buffer_reader) for _ in range(num_days))
+            to_ret["actual_state"] = [tuple(chain.get_states(window)) for window in raw_windows]
         to_ret["is_prediction_correct"] = to_ret['actual_state'].apply(tuple) == to_ret['predicted_state'].apply(tuple)
         
         return to_ret

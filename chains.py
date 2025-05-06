@@ -157,7 +157,7 @@ class FreqModelMC(MarkovChain):
         self.state_func = state_func
         # create list of states using days and att_num parameters
 
-        self.all_states = self.get_states(df['Open_adjusted'])
+        self.all_states = self.get_states(df['Open_adjusted'])  # All states in the training range
 
     def set_current_state(self, new_state: State):
         assert len(new_state) == len(self.current_state)
@@ -165,6 +165,13 @@ class FreqModelMC(MarkovChain):
 
     def get_current_state(self):
         return self.current_state
+
+    def get_next_state(self):
+        """
+        Returns the next state based on the current index, but does not update index.
+        Must be called before step or order will be incorrect.
+        """
+        return State(self.all_states[self.cur_state_index + 1])
 
     def regen_p_matrix(self):
         """
@@ -184,11 +191,14 @@ class FreqModelMC(MarkovChain):
         return State(next_state)
 
     def step(self,
-             num: int) -> list[State]:
-        to_ret: list[State] = []
+             num: int) -> tuple[list[State], list[State]]:
+        to_ret_pred: list[State] = []
+        to_ret_actual: list[State] = []
+
         for _ in range(num):
-            to_ret.append(self._step())
-        return to_ret
+            to_ret_actual.append(self.get_next_state())
+            to_ret_pred.append(self._step())
+        return to_ret_pred, to_ret_actual
 
     def get_states(self, raw_data: pd.Series):
         """Classifies states for the given chain
