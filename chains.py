@@ -32,7 +32,7 @@ class MarkovChain(ABC):
         """
         pass
     @abstractmethod
-    def get_states(raw_data:pd.Series):
+    def get_states(self, raw_data: pd.Series):
         """Classifies states for the given chain
 
         Args:
@@ -135,27 +135,28 @@ class FeedingPercAggMC(MarkovChain):
 
 class FreqModelMC(MarkovChain):
     current_state: State
-    cur_state_index: int = 0
+    cur_state_index: int = -1
     p_matrix: pd.DataFrame = None
 
-    def __init__(self, df, year_horizon, today, days, att_num, sample_range,
+    def __init__(self, df, train_range, days, att_num, sample_range,
                  state_func=get_state.get_state_by_perc_change):
         # year horizon and today define training range, sample range for output comparison
         df['Date'] = pd.to_datetime(df['Date'])
-        df = df[(year_horizon < df['Date']) & (df['Date'] <= today)]
-
-        # create list of states using days and att_num parameters
-        self.all_states = get_state.state_list(df['Open_adjusted'], state_func, att_num, days)
-        self.cur_state_index = df[df['Date'] == sample_range[0]].index  # cur_index starts at first day in sample range
-
-        self.p_matrix = t_table_generator_by_prob(df, year_horizon, today, days, att_num, state_func)
+        df = df[(train_range[0] < df['Date']) & (df['Date'] <= train_range[1])]
+        self.cur_state_index = df[df['Date'] == sample_range[0]].index[0]  # cur_index starts at first day in sample range
+        # TODO: add error handling when invalid sample dates given
+        if self.cur_state_index == -1:
+            raise ValueError(f"No matching date found for {sample_range[0]}")
+        self.p_matrix = t_table_generator_by_prob(df, train_range[0], train_range[1], days, att_num, state_func)
         self.df = df
-        self.year_horizon = year_horizon  # lower bound of training range
-        self.today = today  # upper bound of training range
+        self.train_range = train_range  # tuple of Datetime objects
         self.days = days
         self.att_num = att_num
-        self.sample_range = sample_range
+        self.sample_range = sample_range  # tuple of Datetime objects
         self.state_func = state_func
+        # create list of states using days and att_num parameters
+
+        self.all_states = self.get_states(df['Open_adjusted'])
 
     def set_current_state(self, new_state: State):
         assert len(new_state) == len(self.current_state)
@@ -171,9 +172,8 @@ class FreqModelMC(MarkovChain):
         self.p_matrix = t_table_generator_by_prob(self.df, self.year_horizon, self.today, self.days, self.att_num, self.state_func)
 
     def _step(self) -> State:
-        window = self.all_states[self.cur_state_index: self.cur_state_index + self.days]
         # starts at zero, then increments by one
-        cur_state = State(window[self.cur_state_index])
+        cur_state = State(self.all_states[self.cur_state_index])
         self.cur_state_index += 1
         next_state_probs = self.p_matrix.loc[cur_state.as_tuple()]
         next_state = get_target_max(next_state_probs)
@@ -186,6 +186,14 @@ class FreqModelMC(MarkovChain):
         for _ in range(num):
             to_ret.append(self._step())
         return to_ret
+
+    def get_states(self, raw_data: pd.Series):
+        """Classifies states for the given chain
+
+        Args:
+            raw_data (pd.Series): The data to be classified
+        """
+        return get_state.state_list(raw_data, self.state_func, self.att_num, self.days)
 
 class RandomizedMaxProbMC(MarkovChain):
     """This Markov Chain uses `transition_fn_by_randomized_vector` to generate probabilities then picks using get_target_max"""
