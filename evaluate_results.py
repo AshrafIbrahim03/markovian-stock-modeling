@@ -132,8 +132,8 @@ init_state = State(tuple([0, 0, 0]))
 att_range = range(3, 15, 2)
 days_range = range(3, 15, 2)
 
-if os.path.exists('./freq_results.csv'):
-    final_df = pd.read_csv('freq_results.csv')
+if os.path.exists('./freq_results1.csv'):
+    final_df = pd.read_csv('freq_results1.csv')
 else:
     final_df = pd.DataFrame(columns=['predicted_state', 'actual_state', 'is_prediction_correct', 'num_att', 'win_length'])
 
