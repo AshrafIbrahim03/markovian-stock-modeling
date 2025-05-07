@@ -11,9 +11,6 @@ from buffer_reader import BufferReader
 
 from state import State,StateValidator
 
-df = pd.read_csv('./data/inflation_adjusted_berkshire_stocks.csv')
-df = pd.Series(df['Open_adjusted'])
-linreg = chains.LinRegMC(df, 3, num_bins=3)
 
 class ChainEvaluator:
     """
@@ -95,18 +92,20 @@ class Evaluator():
         Returns:
             pd.DataFrame: A dataframe with columns: ["predicted_state","actual_state","is_prediction_correct"]. predicted_state will be tuple[int], actual_state will be tuple[int], is_prediction_correct is a boolean representing if the prediction is correct
         """
-        to_ret = pd.DataFrame(columns=["run","predicted_state","actual_state","is_prediction_correct"])
+        to_ret = pd.DataFrame(columns=["run", "num_att", 'win_length', "predicted_state", "actual_state", "is_prediction_correct"])
         if isinstance(chain, FreqModelMC):
-            rows = [(state[0].as_tuple(), state[1].as_tuple()) for state in chain.step(num_days)]
-            to_ret[["predicted_state", "actual_state"]] = pd.DataFrame(rows)
+            rows = chain.step(num_days)
+            to_ret = pd.DataFrame(data={"predicted_state": rows[0], "actual_state": rows[1]})
+            to_ret["is_prediction_correct"] = (to_ret['actual_state'] == to_ret['predicted_state']).astype(int)
         else:
             to_ret["predicted_state"] = [state[0].as_tuple() for state in chain.step(num_days)]
             next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
             raw_windows = (next(self.buffer_reader) for _ in range(num_days))
             to_ret["actual_state"] = [tuple(chain.get_states(window)) for window in raw_windows]
-        to_ret["is_prediction_correct"] = to_ret['actual_state'].apply(tuple) == to_ret['predicted_state'].apply(tuple)
-        
-        return to_ret
+            to_ret["is_prediction_correct"] = to_ret['actual_state'].apply(tuple) == to_ret['predicted_state'].apply(tuple)
+        to_ret['num_att'] = chain.att_num
+        to_ret['win_length'] = chain.days
+        return to_ret.dropna()
     def get_perc_correct(self,chain:MarkovChain,num_days:int)-> float:
         next(self.buffer_reader) # need to start on the next window because the markov chain predicts what the next window will be
         raw_windows = (next(self.buffer_reader) for _ in range(num_days))
@@ -121,12 +120,14 @@ class Evaluator():
             num_iterated+=1
         
         return num_correct / num_iterated
-            
+
+
 df = pd.read_csv('data/inflation_adjusted_berkshire_stocks.csv')
 data = df['Open_adjusted']
 
 validator = StateValidator(3, 3)
 eval = Evaluator(data=data, val=validator)
 init_state = State(tuple([0, 0, 0]))
-chain = FreqModelMC(init_state, df, datetime.datetime(2015, 1, 1), datetime.datetime(2025, 3, 1), 3, 3, sample_range=())
-eval.get_perc_correct()
+chain = FreqModelMC(df, train_range=(datetime.datetime(2015, 1, 1), datetime.datetime(2021, 1, 1)), att_num=3, days=3, sample_range=(datetime.datetime(2020, 1, 2), datetime.datetime(2020, 12, 31)))
+result = eval.evaluate_as_df(chain, 1000)
+result.to_csv('freq_results.csv')

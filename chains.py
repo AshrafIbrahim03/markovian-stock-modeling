@@ -1,4 +1,6 @@
 #! ./venv/bin/python
+import numpy as np
+
 import get_state
 from get_state import (
     get_state_by_percentile,
@@ -171,7 +173,10 @@ class FreqModelMC(MarkovChain):
         Returns the next state based on the current index, but does not update index.
         Must be called before step or order will be incorrect.
         """
-        return State(self.all_states[self.cur_state_index + 1])
+        if len(self.all_states) <= self.cur_state_index + 1:
+            return np.nan
+        else:
+            return State(self.all_states[self.cur_state_index + 1])
 
     def regen_p_matrix(self):
         """
@@ -181,6 +186,8 @@ class FreqModelMC(MarkovChain):
 
     def _step(self) -> State:
         # starts at zero, then increments by one
+        if self.cur_state_index >= len(self.all_states):
+            return np.nan
         cur_state = State(self.all_states[self.cur_state_index])
         self.cur_state_index += 1
 
@@ -285,7 +292,6 @@ class LinRegMC(MarkovChain):
 
     def _step(self) -> State:
         window = next(self.buffer_reader)
-        # print(window)
         current_state = State(tuple(self.get_states(window)))
         assert self.validator.is_valid_state(current_state), f"{current_state} is not a valid state"
         # next_state = transition_fn_by_lin_reg(current_state,self.validator)
