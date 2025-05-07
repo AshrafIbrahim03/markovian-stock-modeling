@@ -141,9 +141,9 @@ for pair in product(att_range, days_range):
     if ((final_df['num_att'] == pair[0]) & (final_df['win_length'] == pair[1])).any():
         print(f'Parameter combo num_att: {pair[0]} and win_length: {pair[1]} has already been covered. Moving on.')
         continue
-    chain = FreqModelMC(df, train_range=(datetime.datetime(2015, 1, 1), datetime.datetime(2021, 1, 1)), att_num=pair[0], days=pair[1], sample_range=(datetime.datetime(2020, 1, 2), datetime.datetime(2020, 12, 31)))
+    chain = FreqModelMC(df, train_range=(datetime.datetime(2005, 1, 1), datetime.datetime(2021, 1, 1)), att_num=pair[0], days=pair[1], sample_range=(datetime.datetime(2020, 1, 2), datetime.datetime(2020, 12, 31)))
     result = eval.evaluate_as_df(chain, 1000)
     final_df = pd.concat([final_df, result])
-    final_df.to_csv('freq_results.csv')
+    final_df.to_csv('freq_results1.csv')
     print(final_df)
 

@@ -144,13 +144,13 @@ class FreqModelMC(MarkovChain):
                  state_func=get_state.get_state_by_perc_change):
         # year horizon and today define training range, sample range for output comparison
         df['Date'] = pd.to_datetime(df['Date'])
-        df = df[(train_range[0] < df['Date']) & (df['Date'] <= train_range[1])]
         df = df.reset_index()
         self.cur_state_index = df[df['Date'] == sample_range[0]].index[0]  # cur_index starts at first day in sample range
         # TODO: add error handling when invalid sample dates given
         if self.cur_state_index == -1:
             raise ValueError(f"No matching date found for {sample_range[0]}")
-        self.p_matrix = t_table_generator_by_prob(df, train_range[0], train_range[1], days, att_num, state_func)
+        # p matrix does not calculate with sample values
+        self.p_matrix = t_table_generator_by_prob(df, train_range[0], sample_range[0], days, att_num, state_func)
         self.df = df
         self.train_range = train_range  # tuple of Datetime objects
         self.days = days

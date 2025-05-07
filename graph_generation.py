@@ -1,6 +1,13 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
+df = pd.read_csv('freq_results.csv')
+print(type(df['predicted_state']))
+df['non_neutral_rec'] = (df['predicted_state'][-1] != 0)
+# add non_neutral binary column
+
+att_groups = df.groupby('num_att')['is_prediction_correct'].agg()
+
 # Calculate the running correct percentage using a cumulative average
 running_percentage = res['is_prediction_correct'].expanding().mean()
 
