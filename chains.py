@@ -192,7 +192,7 @@ class FreqModelMC(MarkovChain):
         self.cur_state_index += 1
 
         next_state_probs = self.p_matrix.loc[[cur_state.as_tuple()]].squeeze()
-        print(next_state_probs.loc[[(0, 0, 0)]])
+        # print(next_state_probs.loc[[(0, 0, 0)]])
         next_state = get_target_max(next_state_probs)
         print(f"{cur_state}->{next_state}")
         return State(next_state)

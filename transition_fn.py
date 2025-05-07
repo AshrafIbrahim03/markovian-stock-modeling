@@ -37,10 +37,12 @@ def t_table_generator_by_prob(df: pd.DataFrame,
     counts = Counter(state_history[:-1])  # How many times each state appears in the history
 
     pairs = list(zip(state_history[:-1], state_history[1:]))
-
-    data = [[pairs.count((i, j)) / counts[i] if counts[i] > 0 else 0
+    print(counts)
+    alpha = 1e-6
+    data = [[(pairs.count((i, j)) + alpha) / (counts[i] + alpha * len(combos))
              for j in combos]
             for i in combos]
+    # if counts[i] > 0 else 0.0
     result_df = pd.DataFrame(data, index=combos, columns=combos)
     return result_df
 

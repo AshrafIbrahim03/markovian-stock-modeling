@@ -32,6 +32,9 @@ def get_target_max(prob_series: pd.Series) -> tuple[int]:
     Arguments:
     prob_series:pd.Series -> This is a series whose values are the probability that the index will occur.
     """
+    if not np.isclose(prob_series.sum(), 1):
+        print(prob_series.sum())
+        print(prob_series)
     assert np.isclose(prob_series.sum(), 1) # All the values must sum to 1 for it to be a probability vector
 
     return prob_series.sort_values(ascending=False).index[0]

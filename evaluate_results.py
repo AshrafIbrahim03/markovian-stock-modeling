@@ -8,6 +8,7 @@ import get_state
 import get_target
 import os
 from buffer_reader import BufferReader
+from itertools import product
 
 from state import State,StateValidator
 
@@ -128,6 +129,21 @@ data = df['Open_adjusted']
 validator = StateValidator(3, 3)
 eval = Evaluator(data=data, val=validator)
 init_state = State(tuple([0, 0, 0]))
-chain = FreqModelMC(df, train_range=(datetime.datetime(2015, 1, 1), datetime.datetime(2021, 1, 1)), att_num=3, days=3, sample_range=(datetime.datetime(2020, 1, 2), datetime.datetime(2020, 12, 31)))
-result = eval.evaluate_as_df(chain, 1000)
-result.to_csv('freq_results.csv')
+att_range = range(3, 15, 2)
+days_range = range(3, 15, 2)
+
+if os.path.exists('./freq_results.csv'):
+    final_df = pd.read_csv('freq_results.csv')
+else:
+    final_df = pd.DataFrame(columns=['predicted_state', 'actual_state', 'is_prediction_correct', 'num_att', 'win_length'])
+
+for pair in product(att_range, days_range):
+    if ((final_df['num_att'] == pair[0]) & (final_df['win_length'] == pair[1])).any():
+        print(f'Parameter combo num_att: {pair[0]} and win_length: {pair[1]} has already been covered. Moving on.')
+        continue
+    chain = FreqModelMC(df, train_range=(datetime.datetime(2015, 1, 1), datetime.datetime(2021, 1, 1)), att_num=pair[0], days=pair[1], sample_range=(datetime.datetime(2020, 1, 2), datetime.datetime(2020, 12, 31)))
+    result = eval.evaluate_as_df(chain, 1000)
+    final_df = pd.concat([final_df, result])
+    final_df.to_csv('freq_results.csv')
+    print(final_df)
+
